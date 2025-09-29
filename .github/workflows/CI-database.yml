@@ -1,0 +1,27 @@
+name: CI - Database
+run-name: "CI: Build database"
+
+on:
+  push:
+    branches:
+      - main
+    paths:
+      - 'database/**'
+      - '.github/workflows/*database*.yml'
+  pull_request:
+    paths:
+      - 'database/**'
+  workflow_dispatch:
+
+jobs:
+  backend-docker-build:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v3
+      - name: Set up Docker Compose
+        uses: docker/setup-compose-action@v1
+        with:
+          version: latest
+      - name: Build database
+        run: docker compose build database

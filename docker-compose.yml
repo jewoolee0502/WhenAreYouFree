@@ -1,0 +1,36 @@
+services:
+  frontend:
+    container_name: wayf-frontend
+    build:
+      dockerfile: frontend/Dockerfile
+      context: .
+    ports:
+      - "3000:3000"
+    watch:
+
+    depends_on:
+      - backend
+
+  backend:
+    container_name: wayf-backend
+    build:
+      dockerfile: backend/Dockerfile
+      context: .
+    ports:
+      - "8000:8000"
+    depends_on:
+      - database
+
+  database:
+    container_name: wayf-database
+    build:
+      context: .
+      dockerfile: database/Dockerfile
+    environment:
+      POSTGRES_USER: yourusername
+      POSTGRES_PASSWORD: yourpassword
+      POSTGRES_DB: yourdatabase
+    ports:
+      - "5432:5432"
+    volumes:
+      - wayf-data:/var/lib/postgresql/data
