@@ -2,20 +2,18 @@ services:
   frontend:
     container_name: wayf-frontend
     build:
-      dockerfile: frontend/Dockerfile
-      context: .
+      context: ./frontend
+      dockerfile: Dockerfile
     ports:
       - "3000:3000"
-    watch:
-
     depends_on:
       - backend
 
   backend:
     container_name: wayf-backend
     build:
-      dockerfile: backend/Dockerfile
-      context: .
+      context: ./backend/
+      dockerfile: Dockerfile
     ports:
       - "8000:8000"
     depends_on:
@@ -34,3 +32,6 @@ services:
       - "5432:5432"
     volumes:
       - wayf-data:/var/lib/postgresql/data
+
+volumes:
+  wayf-data:

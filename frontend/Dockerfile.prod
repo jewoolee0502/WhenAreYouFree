@@ -1,0 +1,14 @@
+FROM oven/bun:latest AS build
+
+WORKDIR /app
+
+COPY package.json bun.lock /app/
+RUN bun install
+
+COPY . .
+RUN bun run build
+
+FROM oven/bun:latest as prod
+WORKDIR /app
+COPY --from=build /app/.output/ ./
+CMD ["bun", "run", "preview", "--", "--host", "0.0.0.0"]
