@@ -1,14 +1,7 @@
 <template>
-  <div style="min-height: 100vh; background: linear-gradient(to bottom, #f0f9ff, #ffffff); font-family: system-ui, -apple-system, sans-serif; position: relative; overflow-x: hidden;">
-    <!-- Decorative Background Elements -->
-    <div style="position: absolute; top: 0; left: 0; right: 0; height: 100%; pointer-events: none; overflow: hidden; z-index: 0;">
-      <div :style="bgCircle1Style"></div>
-      <div :style="bgCircle2Style"></div>
-      <div :style="bgCircle3Style"></div>
-    </div>
-
+  <div style="min-height: 100vh; background: #ffffff; font-family: system-ui, -apple-system, sans-serif; position: relative; overflow-x: hidden;">
     <!-- Navigation -->
-    <nav style="border-bottom: 1px solid rgba(229, 231, 235, 0.5); background-color: rgba(255, 255, 255, 0.8); backdrop-filter: blur(10px); position: sticky; top: 0; z-index: 50; width: 100%;">
+    <nav style="background-color: rgba(255, 255, 255, 0.8); backdrop-filter: blur(10px); position: sticky; top: 0; z-index: 50; width: 100%;">
       <div style="width: 100%; padding: 0 2rem;">
         <div style="display: flex; justify-content: space-between; align-items: center; height: 4rem;">
           <div style="display: flex; align-items: center; gap: 0.5rem; cursor: pointer;">
@@ -206,66 +199,14 @@ const calendarDates = computed(() => {
 
 // Animation state
 const floatOffset = ref(0)
-const bgOffset = ref(0)
 
 onMounted(() => {
   const animate = () => {
     floatOffset.value += 0.02
-    bgOffset.value += 0.005
     if (floatOffset.value >= Math.PI * 2) floatOffset.value = 0
-    if (bgOffset.value >= Math.PI * 2) bgOffset.value = 0
     requestAnimationFrame(animate)
   }
   animate()
-})
-
-// Background decorative circles
-const bgCircle1Style = computed(() => {
-  const x = Math.sin(bgOffset.value) * 20
-  const y = Math.cos(bgOffset.value) * 20
-  return {
-    position: 'absolute',
-    top: '10%',
-    left: '10%',
-    width: '400px',
-    height: '400px',
-    background: 'radial-gradient(circle, rgba(22, 163, 74, 0.1), transparent 70%)',
-    borderRadius: '50%',
-    transform: `translate(${x}px, ${y}px)`,
-    transition: 'transform 0.1s ease-out'
-  } as const
-})
-
-const bgCircle2Style = computed(() => {
-  const x = Math.sin(bgOffset.value + Math.PI) * 15
-  const y = Math.cos(bgOffset.value + Math.PI) * 15
-  return {
-    position: 'absolute',
-    top: '60%',
-    right: '10%',
-    width: '300px',
-    height: '300px',
-    background: 'radial-gradient(circle, rgba(59, 130, 246, 0.08), transparent 70%)',
-    borderRadius: '50%',
-    transform: `translate(${x}px, ${y}px)`,
-    transition: 'transform 0.1s ease-out'
-  } as const
-})
-
-const bgCircle3Style = computed(() => {
-  const x = Math.sin(bgOffset.value * 0.5) * 10
-  const y = Math.cos(bgOffset.value * 0.5) * 10
-  return {
-    position: 'absolute',
-    bottom: '20%',
-    left: '50%',
-    width: '200px',
-    height: '200px',
-    background: 'radial-gradient(circle, rgba(139, 92, 246, 0.06), transparent 70%)',
-    borderRadius: '50%',
-    transform: `translate(${x}px, ${y}px)`,
-    transition: 'transform 0.1s ease-out'
-  } as const
 })
 
 const calendarContainerStyle = computed(() => {
