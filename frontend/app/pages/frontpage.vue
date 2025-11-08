@@ -38,10 +38,10 @@
         </div>
 
         <h2 style="font-size: 3.5rem; font-weight: 800; background: linear-gradient(135deg, #111827, #4b5563); -webkit-background-clip: text; -webkit-text-fill-color: transparent; background-clip: text; margin: 0 0 1.5rem; line-height: 1.1; letter-spacing: -0.02em;">
-          Find a time to meet
+          WhenAreYouFree
         </h2>
-        <p style="font-size: 1.375rem; color: #6b7280; margin: 0 0 2.5rem; line-height: 1.7; max-width: 600px; margin-left: auto; margin-right: auto;">
-          Coordinate group meetings without the back and forth. Integrates seamlessly with your calendar.
+        <p style="font-size: 1.375rem; color: #6b7280; margin: 0 0 2.5rem; line-height: 1.7; max-width: 700px; margin-left: auto; margin-right: auto;">
+          Coordinate group hangouts and meetings without the back and forth. Integrates seamlessly with your calendar.
         </p>
         
         <div style="display: flex; gap: 1rem; justify-content: center; align-items: center; flex-wrap: wrap; margin-bottom: 1.5rem;">
