@@ -22,110 +22,197 @@
 
     <!-- Dashboard Content -->
     <div style="padding: 2rem; max-width: 1400px; margin: 0 auto;">
-      <!-- Controls Section -->
-      <div style="background: #f9fafb; border: 1px solid #e5e7eb; border-radius: 0.75rem; padding: 1.5rem; margin-bottom: 2rem;">
-        <h2 style="font-size: 1.5rem; font-weight: 700; color: #111827; margin: 0 0 1.5rem;">Calendar Settings</h2>
-        
-        <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(250px, 1fr)); gap: 1.5rem;">
-          <!-- Start Date -->
-          <div>
-            <label style="display: block; font-size: 0.875rem; font-weight: 600; color: #374151; margin-bottom: 0.5rem;">Start Date</label>
-            <input 
-              type="date" 
-              v-model="startDate"
-              @change="updateCalendar"
-              style="width: 100%; padding: 0.625rem 0.75rem; border: 1px solid #d1d5db; border-radius: 0.5rem; font-size: 0.875rem; color: #111827; background: white; cursor: pointer; transition: border-color 0.2s;"
-              onfocus="this.style.borderColor='#16a34a'; this.style.outline='none'"
-              onblur="this.style.borderColor='#d1d5db'"
-            />
-          </div>
+      <!-- Settings and Buttons Section -->
+      <div class="settings-buttons-grid" style="display: grid; grid-template-columns: 1fr 320px; gap: 1.5rem; margin-bottom: 1.5rem; align-items: start;">
+        <!-- Calendar Settings -->
+        <div style="background: #f9fafb; border: 1px solid #e5e7eb; border-radius: 0.75rem; padding: 1.5rem;">
+          <h2 style="font-size: 1.5rem; font-weight: 700; color: #111827; margin: 0 0 1.5rem;">Calendar Settings</h2>
+          
+          <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(250px, 1fr)); gap: 1.5rem;">
+            <!-- Dates Selection -->
+            <div style="grid-column: 1 / -1;">
+              <label style="display: block; font-size: 0.875rem; font-weight: 600; color: #374151; margin-bottom: 0.5rem;">Dates</label>
+              <div style="position: relative; display: inline-block;">
+                <input 
+                  type="text"
+                  v-model="dateInputText"
+                  @input="handleDateInput"
+                  @focus="handleDateInputFocus"
+                  @blur="handleDateInputBlur"
+                  @click.stop="showDatePicker = true"
+                  data-date-picker-button
+                  placeholder="YYYY/MM/DD - YYYY/MM/DD"
+                  :style="{
+                    width: dateInputWidth,
+                    padding: '0.625rem 2.5rem 0.625rem 0.75rem',
+                    border: `1px solid ${showDatePicker ? '#16a34a' : '#d1d5db'}`,
+                    borderRadius: '0.5rem',
+                    fontSize: '0.875rem',
+                    color: '#111827',
+                    background: 'white',
+                    cursor: 'pointer',
+                    transition: 'border-color 0.2s, width 0.2s'
+                  }"
+                />
+                <div 
+                  @click.stop="showDatePicker = !showDatePicker"
+                  data-date-picker-button
+                  style="position: absolute; right: 0.75rem; top: 50%; transform: translateY(-50%); cursor: pointer; pointer-events: auto; display: flex; align-items: center; justify-content: center; z-index: 1;"
+                >
+                  <svg 
+                    style="width: 1rem; height: 1rem; transition: transform 0.2s; color: #6b7280;" 
+                    :style="{ transform: showDatePicker ? 'rotate(180deg)' : 'rotate(0deg)' }" 
+                    fill="none" 
+                    stroke="currentColor" 
+                    viewBox="0 0 24 24"
+                  >
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7" />
+                  </svg>
+                </div>
+                
+                <!-- Date Picker Calendar -->
+                <div 
+                  v-if="showDatePicker"
+                  class="date-picker-calendar"
+                  @click.stop
+                  style="position: absolute; top: calc(100% + 0.5rem); left: 0; background: white; border: 1px solid #e5e7eb; border-radius: 0.75rem; padding: 1.5rem; box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.1), 0 4px 6px -2px rgba(0, 0, 0, 0.05); z-index: 100; min-width: 300px;"
+                >
+                  <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 1rem;">
+                    <button 
+                      @click="previousMonth"
+                      @mouseenter="handleMonthButtonHover($event, true)"
+                      @mouseleave="handleMonthButtonHover($event, false)"
+                      style="background: none; border: none; color: #6b7280; cursor: pointer; padding: 0.25rem; font-size: 1rem; transition: color 0.2s;"
+                    >
+                      &lt;
+                    </button>
+                    <h3 style="font-size: 1rem; font-weight: 600; color: #111827; margin: 0;">{{ currentMonthName }} {{ currentYear }}</h3>
+                    <button 
+                      @click="nextMonth"
+                      @mouseenter="handleMonthButtonHover($event, true)"
+                      @mouseleave="handleMonthButtonHover($event, false)"
+                      style="background: none; border: none; color: #6b7280; cursor: pointer; padding: 0.25rem; font-size: 1rem; transition: color 0.2s;"
+                    >
+                      &gt;
+                    </button>
+                  </div>
+                  
+                  <div style="display: grid; grid-template-columns: repeat(7, 1fr); gap: 0.25rem; margin-bottom: 0.5rem;">
+                    <div v-for="day in weekDays" :key="day" style="text-align: center; font-size: 0.75rem; font-weight: 600; color: #9ca3af; padding: 0.5rem; text-transform: uppercase; letter-spacing: 0.05em;">
+                      {{ day }}
+                    </div>
+                  </div>
+                  
+                  <div style="display: grid; grid-template-columns: repeat(7, 1fr); gap: 0.25rem;">
+                    <div 
+                      v-for="(date, index) in calendarDays" 
+                      :key="index"
+                      @mousedown="startDateSelection(date)"
+                      @mouseenter="continueDateSelection(date)"
+                      @mouseup="endDateSelection"
+                      :style="getDatePickerCellStyle(date)"
+                      style="padding: 0.5rem; text-align: center; font-size: 0.875rem; font-weight: 500; border-radius: 0.5rem; cursor: pointer; transition: all 0.2s; user-select: none;"
+                    >
+                      {{ date ? date.getDate() : '' }}
+                    </div>
+                  </div>
+                  
+                  <div style="margin-top: 1rem; padding-top: 1rem; border-top: 1px solid #e5e7eb; display: flex; gap: 0.5rem; justify-content: flex-end;">
+                    <button 
+                      @click="clearSelection"
+                      @mouseenter="handleButtonHover($event, true, '#16a34a')"
+                      @mouseleave="handleButtonHover($event, false, '#d1d5db')"
+                      style="padding: 0.5rem 1rem; font-size: 0.875rem; background: transparent; border: 1px solid #d1d5db; border-radius: 0.5rem; color: #374151; cursor: pointer; transition: all 0.2s;"
+                    >
+                      Clear
+                    </button>
+                    <button 
+                      @click="showDatePicker = false"
+                      @mouseenter="handleDoneButtonHover($event, true)"
+                      @mouseleave="handleDoneButtonHover($event, false)"
+                      style="padding: 0.5rem 1rem; font-size: 0.875rem; background: linear-gradient(135deg, #16a34a, #059669); border: none; border-radius: 0.5rem; color: white; cursor: pointer; transition: all 0.2s; font-weight: 600;"
+                    >
+                      Done
+                    </button>
+                  </div>
+                </div>
+              </div>
+            </div>
 
-          <!-- Number of Dates -->
-          <div>
-            <label style="display: block; font-size: 0.875rem; font-weight: 600; color: #374151; margin-bottom: 0.5rem;">Number of Dates</label>
-            <input 
-              type="number" 
-              v-model.number="numberOfDates"
-              @change="updateCalendar"
-              min="1"
-              max="14"
-              style="width: 100%; padding: 0.625rem 0.75rem; border: 1px solid #d1d5db; border-radius: 0.5rem; font-size: 0.875rem; color: #111827; background: white; cursor: pointer; transition: border-color 0.2s;"
-              onfocus="this.style.borderColor='#16a34a'; this.style.outline='none'"
-              onblur="this.style.borderColor='#d1d5db'"
-            />
-          </div>
+            <!-- Start Time -->
+            <div>
+              <label style="display: block; font-size: 0.875rem; font-weight: 600; color: #374151; margin-bottom: 0.5rem;">Start Time</label>
+              <input 
+                type="time" 
+                v-model="startTime"
+                @change="updateCalendar"
+                style="width: 100%; padding: 0.625rem 0.75rem; border: 1px solid #d1d5db; border-radius: 0.5rem; font-size: 0.875rem; color: #111827; background: white; cursor: pointer; transition: border-color 0.2s;"
+                onfocus="this.style.borderColor='#16a34a'; this.style.outline='none'"
+                onblur="this.style.borderColor='#d1d5db'"
+              />
+            </div>
 
-          <!-- Start Time -->
-          <div>
-            <label style="display: block; font-size: 0.875rem; font-weight: 600; color: #374151; margin-bottom: 0.5rem;">Start Time</label>
-            <input 
-              type="time" 
-              v-model="startTime"
-              @change="updateCalendar"
-              style="width: 100%; padding: 0.625rem 0.75rem; border: 1px solid #d1d5db; border-radius: 0.5rem; font-size: 0.875rem; color: #111827; background: white; cursor: pointer; transition: border-color 0.2s;"
-              onfocus="this.style.borderColor='#16a34a'; this.style.outline='none'"
-              onblur="this.style.borderColor='#d1d5db'"
-            />
-          </div>
-
-          <!-- End Time -->
-          <div>
-            <label style="display: block; font-size: 0.875rem; font-weight: 600; color: #374151; margin-bottom: 0.5rem;">End Time</label>
-            <input 
-              type="time" 
-              v-model="endTime"
-              @change="updateCalendar"
-              style="width: 100%; padding: 0.625rem 0.75rem; border: 1px solid #d1d5db; border-radius: 0.5rem; font-size: 0.875rem; color: #111827; background: white; cursor: pointer; transition: border-color 0.2s;"
-              onfocus="this.style.borderColor='#16a34a'; this.style.outline='none'"
-              onblur="this.style.borderColor='#d1d5db'"
-            />
+            <!-- End Time -->
+            <div>
+              <label style="display: block; font-size: 0.875rem; font-weight: 600; color: #374151; margin-bottom: 0.5rem;">End Time</label>
+              <input 
+                type="time" 
+                v-model="endTime"
+                @change="updateCalendar"
+                style="width: 100%; padding: 0.625rem 0.75rem; border: 1px solid #d1d5db; border-radius: 0.5rem; font-size: 0.875rem; color: #111827; background: white; cursor: pointer; transition: border-color 0.2s;"
+                onfocus="this.style.borderColor='#16a34a'; this.style.outline='none'"
+                onblur="this.style.borderColor='#d1d5db'"
+              />
+            </div>
           </div>
         </div>
-      </div>
 
-      <!-- Action Buttons -->
-      <div style="display: flex; gap: 1rem; margin-bottom: 1.5rem; flex-wrap: wrap;">
-        <button 
-          @click="copyLink"
-          :disabled="copyLinkLoading"
-          :style="{
-            display: 'flex',
-            alignItems: 'center',
-            gap: '0.5rem',
-            padding: '0.75rem 1.5rem',
-            fontSize: '0.875rem',
-            fontWeight: '600',
-            background: 'white',
-            border: '1px solid #d1d5db',
-            borderRadius: '0.5rem',
-            color: copyLinkLoading ? '#9ca3af' : '#374151',
-            cursor: copyLinkLoading ? 'not-allowed' : 'pointer',
-            transition: 'all 0.2s',
-            opacity: copyLinkLoading ? 0.6 : 1
-          }"
-          @mouseenter="handleCopyLinkHover($event, true)"
-          @mouseleave="handleCopyLinkHover($event, false)"
-        >
-          <svg v-if="!copyLinkSuccess" style="width: 1rem; height: 1rem;" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 16H6a2 2 0 01-2-2V6a2 2 0 012-2h8a2 2 0 012 2v2m-6 12h8a2 2 0 002-2v-8a2 2 0 00-2-2h-8a2 2 0 00-2 2v8a2 2 0 002 2z" />
-          </svg>
-          <svg v-else style="width: 1rem; height: 1rem; color: #16a34a;" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7" />
-          </svg>
-          <span>{{ copyLinkSuccess ? 'Link copied!' : 'Copy link' }}</span>
-        </button>
-        
-        <button 
-          @click="addAvailability"
-          style="display: flex; align-items: center; gap: 0.5rem; padding: 0.75rem 1.5rem; font-size: 0.875rem; font-weight: 600; background: linear-gradient(135deg, #16a34a, #059669); color: white; border: none; border-radius: 0.5rem; cursor: pointer; transition: all 0.2s; box-shadow: 0 1px 3px 0 rgba(22, 163, 74, 0.3);"
-          onmouseover="this.style.transform='translateY(-1px)'; this.style.boxShadow='0 4px 6px -1px rgba(22, 163, 74, 0.4)'"
-          onmouseout="this.style.transform='translateY(0)'; this.style.boxShadow='0 1px 3px 0 rgba(22, 163, 74, 0.3)'"
-        >
-          <svg style="width: 1rem; height: 1rem;" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4" />
-          </svg>
-          <span>Add availability</span>
-        </button>
+        <!-- Action Buttons -->
+        <div style="display: flex; flex-direction: column; gap: 1rem;">
+          <button 
+            @click="copyLink"
+            :disabled="copyLinkLoading"
+            :style="{
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'center',
+              gap: '0.5rem',
+              padding: '0.75rem 1.5rem',
+              fontSize: '0.875rem',
+              fontWeight: '600',
+              background: 'white',
+              border: '1px solid #d1d5db',
+              borderRadius: '0.5rem',
+              color: copyLinkLoading ? '#9ca3af' : '#374151',
+              cursor: copyLinkLoading ? 'not-allowed' : 'pointer',
+              transition: 'all 0.2s',
+              opacity: copyLinkLoading ? 0.6 : 1,
+              width: '100%'
+            }"
+            @mouseenter="handleCopyLinkHover($event, true)"
+            @mouseleave="handleCopyLinkHover($event, false)"
+          >
+            <svg v-if="!copyLinkSuccess" style="width: 1rem; height: 1rem;" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 16H6a2 2 0 01-2-2V6a2 2 0 012-2h8a2 2 0 012 2v2m-6 12h8a2 2 0 002-2v-8a2 2 0 00-2-2h-8a2 2 0 00-2 2v8a2 2 0 002 2z" />
+            </svg>
+            <svg v-else style="width: 1rem; height: 1rem; color: #16a34a;" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7" />
+            </svg>
+            <span>{{ copyLinkSuccess ? 'Link copied!' : 'Copy link' }}</span>
+          </button>
+          
+          <button 
+            @click="addAvailability"
+            style="display: flex; align-items: center; justify-content: center; gap: 0.5rem; padding: 0.75rem 1.5rem; font-size: 0.875rem; font-weight: 600; background: linear-gradient(135deg, #16a34a, #059669); color: white; border: none; border-radius: 0.5rem; cursor: pointer; transition: all 0.2s; box-shadow: 0 1px 3px 0 rgba(22, 163, 74, 0.3); width: 100%;"
+            onmouseover="this.style.transform='translateY(-1px)'; this.style.boxShadow='0 4px 6px -1px rgba(22, 163, 74, 0.4)'"
+            onmouseout="this.style.transform='translateY(0)'; this.style.boxShadow='0 1px 3px 0 rgba(22, 163, 74, 0.3)'"
+          >
+            <svg style="width: 1rem; height: 1rem;" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4" />
+            </svg>
+            <span>Add availability</span>
+          </button>
+        </div>
       </div>
 
       <!-- Calendar and Responses Section -->
@@ -133,7 +220,7 @@
         <!-- Calendar Section -->
         <div style="background: white; border: 1px solid #e5e7eb; border-radius: 0.75rem; overflow: hidden; box-shadow: 0 1px 3px 0 rgba(0, 0, 0, 0.1);">
         <!-- Calendar Header -->
-        <div :style="{ display: 'grid', gridTemplateColumns: `80px repeat(${numberOfDates}, 1fr)`, borderBottom: '1px solid #e5e7eb', background: '#f9fafb' }">
+        <div :style="{ display: 'grid', gridTemplateColumns: `80px repeat(${selectedDates.length}, 1fr)`, borderBottom: '1px solid #e5e7eb', background: '#f9fafb' }">
           <div style="padding: 1rem; border-right: 1px solid #e5e7eb;"></div>
           <div 
             v-for="(date, index) in calendarDates" 
@@ -147,7 +234,7 @@
         </div>
 
         <!-- Calendar Grid -->
-        <div :style="{ display: 'grid', gridTemplateColumns: `80px repeat(${numberOfDates}, 1fr)`, maxHeight: '600px', overflowY: 'auto' }">
+        <div :style="{ display: 'grid', gridTemplateColumns: `80px repeat(${selectedDates.length}, 1fr)`, maxHeight: '600px', overflowY: 'auto' }">
           <!-- Time Column -->
           <div style="border-right: 1px solid #e5e7eb; background: #f9fafb;">
             <div 
@@ -170,8 +257,8 @@
                 borderRight: dateIndex === calendarDates.length - 1 ? 'none' : '1px solid #e5e7eb',
                 borderBottom: timeIndex === timeSlots.length - 1 ? 'none' : '1px solid #e5e7eb'
               }"
-              @mouseenter="$event.target.style.backgroundColor='#f0fdf4'"
-              @mouseleave="$event.target.style.backgroundColor='white'"
+              @mouseenter="handleCellHover($event, true)"
+              @mouseleave="handleCellHover($event, false)"
               @click="handleCellClick(date, timeSlot)"
             >
             </div>
@@ -223,8 +310,8 @@
               :key="index"
               style="padding: 1rem 1.5rem; border-bottom: 1px solid #e5e7eb; display: flex; align-items: center; gap: 0.75rem; transition: background-color 0.2s;"
               :style="{ borderBottom: index === responses.length - 1 ? 'none' : '1px solid #e5e7eb' }"
-              @mouseenter="$event.currentTarget.style.backgroundColor='#f9fafb'"
-              @mouseleave="$event.currentTarget.style.backgroundColor='white'"
+              @mouseenter="handleResponseHover($event, true)"
+              @mouseleave="handleResponseHover($event, false)"
             >
               <!-- Avatar -->
               <div 
@@ -302,7 +389,7 @@
 </template>
 
 <script setup lang="ts">
-import { ref, computed, onMounted } from 'vue'
+import { ref, computed, onMounted, onUnmounted, watch } from 'vue'
 
 // Meta tags
 useHead({
@@ -316,12 +403,25 @@ useHead({
 })
 
 // Calendar settings
-const startDate = ref('')
-const numberOfDates = ref(5)
+const selectedDates = ref<Date[]>([])
 const startTime = ref('09:00')
 const endTime = ref('16:00')
 const timezone = ref('America/Los_Angeles')
 const timeFormat = ref('12h')
+
+// Date picker state
+const showDatePicker = ref(false)
+const currentMonth = ref(new Date().getMonth())
+const currentYear = ref(new Date().getFullYear())
+const isSelecting = ref(false)
+const selectionMode = ref<'select' | 'deselect'>('select')
+const selectionStart = ref<Date | null>(null)
+const selectionEnd = ref<Date | null>(null)
+const dateInputText = ref('')
+const isDateInputFocused = ref(false)
+
+const weekDays = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat']
+const monthNames = ['January', 'February', 'March', 'April', 'May', 'June', 'July', 'August', 'September', 'October', 'November', 'December']
 
 // Button states
 const copyLinkLoading = ref(false)
@@ -343,51 +443,145 @@ const responses = ref<Response[]>([
   { name: 'Diana Prince', responded: true, responseTime: '5 minutes ago' }
 ])
 
-// Initialize start date to today if not set
+// Initialize with default dates (today + next 4 days)
 onMounted(() => {
-  if (!startDate.value) {
+  if (selectedDates.value.length === 0) {
     const today = new Date()
-    const year = today.getFullYear()
-    const month = String(today.getMonth() + 1).padStart(2, '0')
-    const day = String(today.getDate()).padStart(2, '0')
-    startDate.value = `${year}-${month}-${day}`
+    today.setHours(0, 0, 0, 0)
+    for (let i = 0; i < 5; i++) {
+      const date = new Date(today)
+      date.setDate(today.getDate() + i)
+      selectedDates.value.push(date)
+    }
   }
+  updateDateInputText()
   updateCalendar()
+  
+  // Close date picker when clicking outside
+  document.addEventListener('click', handleClickOutside)
 })
 
-// Generate calendar dates
-const calendarDates = computed(() => {
-  if (!startDate.value) return []
+onUnmounted(() => {
+  document.removeEventListener('click', handleClickOutside)
+})
+
+function handleClickOutside(event: MouseEvent) {
+  const target = event.target as HTMLElement
+  const datePicker = document.querySelector('.date-picker-calendar')
+  const datePickerButton = target.closest('[data-date-picker-button]')
+  const dateInput = target.closest('input[type="text"]')
   
-  const dates = []
-  const start = new Date(startDate.value)
+  if (datePicker && !datePicker.contains(target) && !datePickerButton && !dateInput) {
+    showDatePicker.value = false
+  }
+}
+
+// Computed properties for date picker
+const currentMonthName = computed(() => monthNames[currentMonth.value])
+
+// Calculate input width based on content
+const dateInputWidth = computed(() => {
+  // Use the actual placeholder text when input is empty to ensure it's never cut off
+  const placeholderText = 'YYYY/MM/DD - YYYY/MM/DD'
+  const text = dateInputText.value || placeholderText
   
-  for (let i = 0; i < numberOfDates.value; i++) {
-    const currentDate = new Date(start)
-    currentDate.setDate(start.getDate() + i)
-    
-    const monthNames = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec']
-    const dayNames = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat']
-    
-    const month = monthNames[currentDate.getMonth()]
-    const day = currentDate.getDate()
-    const dayName = dayNames[currentDate.getDay()]
-    
-    dates.push({
-      date: currentDate,
-      dateStr: `${month} ${day}`,
-      dayName: dayName
-    })
+  const charWidth = 11 // pixels per character (slightly wider)
+  const extraPadding = 10 // extra space for better readability
+  const calculatedWidth = (text.length * charWidth) + extraPadding
+  
+  // Ensure minimum width is at least enough for the placeholder plus extra space
+  const minWidth = (placeholderText.length * charWidth) + extraPadding
+  return `${Math.max(calculatedWidth, minWidth)}px`
+})
+
+// Update dateInputText when selectedDates changes (but not when user is typing)
+watch(selectedDates, () => {
+  if (!isDateInputFocused.value) {
+    updateDateInputText()
+  }
+}, { deep: true })
+
+function updateDateInputText() {
+  if (selectedDates.value.length === 0) {
+    dateInputText.value = ''
+    return
   }
   
-  return dates
+  const sorted = [...selectedDates.value].sort((a, b) => a.getTime() - b.getTime())
+  if (sorted.length === 1) {
+    const date = sorted[0]
+    if (date) {
+      dateInputText.value = formatDateForInput(date)
+    }
+  } else {
+    // Format as range: YYYY/MM/DD - YYYY/MM/DD
+    const first = sorted[0]
+    const last = sorted[sorted.length - 1]
+    if (first && last) {
+      dateInputText.value = `${formatDateForInput(first)} - ${formatDateForInput(last)}`
+    }
+  }
+}
+
+function formatDateForInput(date: Date): string {
+  const year = date.getFullYear()
+  const month = String(date.getMonth() + 1).padStart(2, '0')
+  const day = String(date.getDate()).padStart(2, '0')
+  return `${year}/${month}/${day}`
+}
+
+// Generate calendar days for date picker
+const calendarDays = computed(() => {
+  const days: (Date | null)[] = []
+  const firstDay = new Date(currentYear.value, currentMonth.value, 1)
+  const lastDay = new Date(currentYear.value, currentMonth.value + 1, 0)
+  const startDayOfWeek = firstDay.getDay()
+  
+  // Add empty cells for days before the first day of the month
+  for (let i = 0; i < startDayOfWeek; i++) {
+    days.push(null)
+  }
+  
+  // Add all days of the month
+  for (let day = 1; day <= lastDay.getDate(); day++) {
+    days.push(new Date(currentYear.value, currentMonth.value, day))
+  }
+  
+  return days
+})
+
+// Generate calendar dates from selected dates
+const calendarDates = computed(() => {
+  if (selectedDates.value.length === 0) return []
+  
+  const shortMonthNames = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec']
+  const dayNames = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat']
+  
+  // Sort dates chronologically
+  const sortedDates = [...selectedDates.value].sort((a, b) => a.getTime() - b.getTime())
+  
+  return sortedDates.map(date => {
+    const month = shortMonthNames[date.getMonth()]
+    const day = date.getDate()
+    const dayName = dayNames[date.getDay()] ?? 'Sun'
+    
+    return {
+      date: date,
+      dateStr: `${month} ${day}`,
+      dayName: dayName
+    }
+  })
 })
 
 // Generate time slots
 const timeSlots = computed(() => {
   const slots = []
-  const [startHour, startMinute] = startTime.value.split(':').map(Number)
-  const [endHour, endMinute] = endTime.value.split(':').map(Number)
+  const startParts = startTime.value.split(':').map(Number)
+  const endParts = endTime.value.split(':').map(Number)
+  const startHour = startParts[0] ?? 9
+  const startMinute = startParts[1] ?? 0
+  const endHour = endParts[0] ?? 16
+  const endMinute = endParts[1] ?? 0
   
   let currentHour = startHour
   let currentMinute = startMinute
@@ -416,6 +610,288 @@ function formatTime(hour: number, minute: number): string {
   } else {
     return `${String(hour).padStart(2, '0')}:${String(minute).padStart(2, '0')}`
   }
+}
+
+// Date picker functions
+function previousMonth() {
+  if (currentMonth.value === 0) {
+    currentMonth.value = 11
+    currentYear.value--
+  } else {
+    currentMonth.value--
+  }
+}
+
+function nextMonth() {
+  if (currentMonth.value === 11) {
+    currentMonth.value = 0
+    currentYear.value++
+  } else {
+    currentMonth.value++
+  }
+}
+
+function startDateSelection(date: Date | null) {
+  if (!date) return
+  isSelecting.value = true
+  selectionStart.value = new Date(date)
+  selectionEnd.value = new Date(date)
+  
+  // Determine selection mode based on whether the initial date is selected
+  const dateStr = dateToKey(date)
+  const isSelected = selectedDates.value.some(d => dateToKey(d) === dateStr)
+  selectionMode.value = isSelected ? 'deselect' : 'select'
+  
+  // Toggle the initial date
+  if (isSelected) {
+    selectedDates.value = selectedDates.value.filter(d => dateToKey(d) !== dateStr)
+  } else {
+    if (!selectedDates.value.some(d => dateToKey(d) === dateStr)) {
+      selectedDates.value.push(new Date(date))
+    }
+  }
+}
+
+function continueDateSelection(date: Date | null) {
+  if (!isSelecting.value || !date || !selectionStart.value) return
+  selectionEnd.value = new Date(date)
+  updateSelectionRange()
+}
+
+function updateSelectionRange() {
+  if (!selectionStart.value || !selectionEnd.value) return
+  
+  let start = new Date(selectionStart.value)
+  let end = new Date(selectionEnd.value)
+  
+  // Ensure start is before end
+  if (start.getTime() > end.getTime()) {
+    const temp = start
+    start = end
+    end = temp
+  }
+  
+  // Generate all dates in range
+  const current = new Date(start)
+  current.setHours(0, 0, 0, 0)
+  
+  while (current.getTime() <= end.getTime()) {
+    const dateKey = dateToKey(current)
+    const isSelected = selectedDates.value.some(d => dateToKey(d) === dateKey)
+    
+    if (selectionMode.value === 'select' && !isSelected) {
+      selectedDates.value.push(new Date(current))
+    } else if (selectionMode.value === 'deselect' && isSelected) {
+      selectedDates.value = selectedDates.value.filter(d => dateToKey(d) !== dateKey)
+    }
+    
+    current.setDate(current.getDate() + 1)
+  }
+}
+
+function endDateSelection() {
+  isSelecting.value = false
+  selectionStart.value = null
+  selectionEnd.value = null
+}
+
+function dateToKey(date: Date): string {
+  return `${date.getFullYear()}-${date.getMonth()}-${date.getDate()}`
+}
+
+function isDateSelected(date: Date | null): boolean {
+  if (!date) return false
+  return selectedDates.value.some(d => dateToKey(d) === dateToKey(date))
+}
+
+function isDateInSelectionRange(date: Date | null): boolean {
+  if (!date || !selectionStart.value || !selectionEnd.value) return false
+  const dateTime = date.getTime()
+  const startTime = selectionStart.value.getTime()
+  const endTime = selectionEnd.value.getTime()
+  const minTime = Math.min(startTime, endTime)
+  const maxTime = Math.max(startTime, endTime)
+  return dateTime >= minTime && dateTime <= maxTime
+}
+
+function getDatePickerCellStyle(date: Date | null) {
+  if (!date) {
+    return { color: 'transparent', cursor: 'default' }
+  }
+  
+  const isSelected = isDateSelected(date)
+  const inRange = isDateInSelectionRange(date)
+  const isToday = dateToKey(date) === dateToKey(new Date())
+  const isCurrentlySelecting = isSelecting.value && inRange
+  
+  // Show different styles for select vs deselect mode during dragging
+  if (isCurrentlySelecting) {
+    if (selectionMode.value === 'deselect') {
+      // Deselect mode: show red background with strikethrough to indicate removal
+      return {
+        backgroundColor: '#fee2e2',
+        color: '#dc2626',
+        fontWeight: '600',
+        border: '2px solid #dc2626',
+        textDecoration: 'line-through',
+        opacity: '0.8'
+      }
+    } else {
+      // Select mode: show green background
+      return {
+        backgroundColor: '#16a34a',
+        color: 'white',
+        fontWeight: '600',
+        opacity: '1'
+      }
+    }
+  }
+  
+  // Already selected dates (not in current drag range)
+  if (isSelected && !inRange) {
+    return {
+      backgroundColor: '#16a34a',
+      color: 'white',
+      fontWeight: '600',
+      opacity: '1'
+    }
+  }
+  
+  if (isToday && !isSelected) {
+    return {
+      backgroundColor: '#f0fdf4',
+      color: '#16a34a',
+      fontWeight: '600',
+      border: '1px solid #16a34a',
+      opacity: '1'
+    }
+  }
+  
+  return {
+    backgroundColor: 'transparent',
+    color: '#111827',
+    opacity: '1'
+  }
+}
+
+function clearSelection() {
+  selectedDates.value = []
+}
+
+// Date input handling functions
+function handleDateInput() {
+  const input = dateInputText.value.trim()
+  if (!input) {
+    selectedDates.value = []
+    return
+  }
+  
+  // Check if input is a range format: YYYY/MM/DD - YYYY/MM/DD
+  const rangeMatch = input.match(/^(\d{4}\/\d{2}\/\d{2})\s*-\s*(\d{4}\/\d{2}\/\d{2})$/)
+  if (rangeMatch && rangeMatch[1] && rangeMatch[2]) {
+    const startDate = parseDateInput(rangeMatch[1])
+    const endDate = parseDateInput(rangeMatch[2])
+    
+    if (startDate && endDate) {
+      // Generate all dates in the range
+      const dates: Date[] = []
+      let current = new Date(startDate)
+      current.setHours(0, 0, 0, 0)
+      let end = new Date(endDate)
+      end.setHours(0, 0, 0, 0)
+      
+      // Ensure start is before end
+      if (current.getTime() > end.getTime()) {
+        const temp = current
+        current = end
+        end = temp
+      }
+      
+      while (current.getTime() <= end.getTime()) {
+        dates.push(new Date(current))
+        current.setDate(current.getDate() + 1)
+      }
+      
+      selectedDates.value = dates
+      return
+    }
+  }
+  
+  // Parse comma-separated dates or single date
+  const dateStrings = input.split(',').map(s => s.trim()).filter(s => s)
+  const parsedDates: Date[] = []
+  
+  for (const dateStr of dateStrings) {
+    const date = parseDateInput(dateStr)
+    if (date) {
+      // Normalize to midnight
+      date.setHours(0, 0, 0, 0)
+      parsedDates.push(date)
+    }
+  }
+  
+  // Remove duplicates
+  const uniqueDates = parsedDates.filter((date, index, self) =>
+    index === self.findIndex(d => dateToKey(d) === dateToKey(date))
+  )
+  
+  selectedDates.value = uniqueDates
+}
+
+function parseDateInput(input: string): Date | null {
+  // Match YYYY/MM/DD or YYYY-MM-DD format (accept both for flexibility)
+  const dateRegex = /^(\d{4})[\/\-](\d{2})[\/\-](\d{2})$/
+  const match = input.match(dateRegex)
+  
+  if (!match || !match[1] || !match[2] || !match[3]) return null
+  
+  const year = parseInt(match[1], 10)
+  const month = parseInt(match[2], 10) - 1 // Month is 0-indexed
+  const day = parseInt(match[3], 10)
+  
+  // Validate date
+  if (month < 0 || month > 11) return null
+  if (day < 1 || day > 31) return null
+  
+  const date = new Date(year, month, day)
+  
+  // Check if date is valid (handles invalid dates like Feb 30)
+  if (date.getFullYear() !== year || date.getMonth() !== month || date.getDate() !== day) {
+    return null
+  }
+  
+  return date
+}
+
+function handleDateInputFocus() {
+  isDateInputFocused.value = true
+}
+
+function handleDateInputBlur() {
+  isDateInputFocused.value = false
+  // Update input text to reflect current selection
+  updateDateInputText()
+}
+
+function handleMonthButtonHover(event: MouseEvent, isEntering: boolean) {
+  const target = event.currentTarget as HTMLElement
+  target.style.color = isEntering ? '#111827' : '#6b7280'
+}
+
+function handleButtonHover(event: MouseEvent, isEntering: boolean, defaultColor: string) {
+  const target = event.currentTarget as HTMLElement
+  if (isEntering) {
+    target.style.borderColor = '#16a34a'
+    target.style.color = '#16a34a'
+  } else {
+    target.style.borderColor = defaultColor
+    target.style.color = '#374151'
+  }
+}
+
+function handleDoneButtonHover(event: MouseEvent, isEntering: boolean) {
+  const target = event.currentTarget as HTMLElement
+  target.style.transform = isEntering ? 'translateY(-1px)' : 'translateY(0)'
 }
 
 // Update calendar when settings change
@@ -486,6 +962,26 @@ function handleCopyLinkHover(event: MouseEvent, isEntering: boolean) {
   }
 }
 
+// Handle calendar cell hover
+function handleCellHover(event: MouseEvent, isEntering: boolean) {
+  const target = event.currentTarget as HTMLElement
+  if (isEntering) {
+    target.style.backgroundColor = '#f0fdf4'
+  } else {
+    target.style.backgroundColor = 'white'
+  }
+}
+
+// Handle response item hover
+function handleResponseHover(event: MouseEvent, isEntering: boolean) {
+  const target = event.currentTarget as HTMLElement
+  if (isEntering) {
+    target.style.backgroundColor = '#f9fafb'
+  } else {
+    target.style.backgroundColor = 'white'
+  }
+}
+
 // Add availability
 function addAvailability() {
   // You can add availability modal or logic here
@@ -498,6 +994,11 @@ function addAvailability() {
 <style scoped>
 /* Mobile Responsive Styles */
 @media (max-width: 1024px) {
+  /* Stack settings and buttons on tablets and smaller */
+  .settings-buttons-grid {
+    grid-template-columns: 1fr !important;
+  }
+  
   /* Stack calendar and responses on tablets and smaller */
   .calendar-responses-grid {
     grid-template-columns: 1fr !important;
