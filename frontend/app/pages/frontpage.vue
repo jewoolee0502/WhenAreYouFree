@@ -20,7 +20,7 @@
             <h1 style="font-size: 1.25rem; font-weight: 700; background: linear-gradient(135deg, #16a34a, #059669); -webkit-background-clip: text; -webkit-text-fill-color: transparent; background-clip: text; margin: 0;">WhenAreYouFree</h1>
           </div>
           <div style="display: flex; align-items: center;">
-            <button style="padding: 0.5rem 1.25rem; font-size: 0.875rem; background: transparent; border: 1px solid #e5e7eb; border-radius: 0.5rem; color: #374151; cursor: pointer; transition: all 0.2s; font-weight: 500;" onmouseover="this.style.borderColor='#16a34a'; this.style.color='#16a34a'" onmouseout="this.style.borderColor='#e5e7eb'; this.style.color='#374151'">Sign in</button>
+            <button @click="showModal = true" style="padding: 0.5rem 1.25rem; font-size: 0.875rem; background: transparent; border: 1px solid #e5e7eb; border-radius: 0.5rem; color: #374151; cursor: pointer; transition: all 0.2s; font-weight: 500;" onmouseover="this.style.borderColor='#16a34a'; this.style.color='#16a34a'" onmouseout="this.style.borderColor='#e5e7eb'; this.style.color='#374151'">Sign in</button>
           </div>
         </div>
       </div>
@@ -137,6 +137,9 @@
         </div>
       </div>
     </section>
+
+    <!-- Login/Signup Modal -->
+    <LoginSignupModal v-model="showModal" />
   </div>
 </template>
 
@@ -160,6 +163,9 @@ useHead({
     }
   ]
 })
+
+// Modal state
+const showModal = ref(false)
 
 // Calendar data
 const currentMonth = ref('September')
