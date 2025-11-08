@@ -109,18 +109,31 @@
             />
           </div>
           <div>
-            <label style="display: block; font-size: 0.875rem; font-weight: 500; color: #374151; margin-bottom: 0.5rem;">Password</label>
+            <label style="display: block; font-size: 0.875rem; font-weight: 500; color: #374151; margin-bottom: 0.5rem;">New Password</label>
             <input 
               v-model="signupForm.password"
               type="password" 
               required
-              placeholder="Create a password"
+              placeholder="Create a new password"
               minlength="8"
               style="width: 100%; padding: 0.75rem; font-size: 0.875rem; border: 1px solid #d1d5db; border-radius: 0.5rem; color: #111827; transition: all 0.2s; box-sizing: border-box;"
               onfocus="this.style.borderColor='#16a34a'; this.style.outline='none'; this.style.boxShadow='0 0 0 3px rgba(22, 163, 74, 0.1)'"
               onblur="this.style.borderColor='#d1d5db'; this.style.boxShadow='none'"
             />
             <p style="font-size: 0.75rem; color: #6b7280; margin: 0.5rem 0 0;">Must be at least 8 characters</p>
+          </div>
+          <div>
+            <label style="display: block; font-size: 0.875rem; font-weight: 500; color: #374151; margin-bottom: 0.5rem;">Confirm New Password</label>
+            <input 
+              v-model="signupForm.confirmPassword"
+              type="password" 
+              required
+              placeholder="Confirm your new password"
+              :style="signupForm.confirmPassword && !passwordsMatch ? 'width: 100%; padding: 0.75rem; font-size: 0.875rem; border: 1px solid #ef4444; border-radius: 0.5rem; color: #111827; transition: all 0.2s; box-sizing: border-box;' : 'width: 100%; padding: 0.75rem; font-size: 0.875rem; border: 1px solid #d1d5db; border-radius: 0.5rem; color: #111827; transition: all 0.2s; box-sizing: border-box;'"
+              onfocus="this.style.borderColor='#16a34a'; this.style.outline='none'; this.style.boxShadow='0 0 0 3px rgba(22, 163, 74, 0.1)'"
+              @blur="handleConfirmPasswordBlur"
+            />
+            <p v-if="signupForm.confirmPassword && !passwordsMatch" style="font-size: 0.75rem; color: #ef4444; margin: 0.5rem 0 0;">Passwords do not match</p>
           </div>
           <div>
             <label style="display: flex; align-items: start; gap: 0.5rem; font-size: 0.875rem; color: #6b7280; cursor: pointer;">
@@ -143,7 +156,7 @@
 </template>
 
 <script setup lang="ts">
-import { ref, watch, onUnmounted } from 'vue'
+import { ref, computed, watch, onUnmounted } from 'vue'
 
 const props = defineProps<{
   modelValue: boolean
@@ -165,7 +178,14 @@ const loginForm = ref({
 const signupForm = ref({
   name: '',
   email: '',
-  password: ''
+  password: '',
+  confirmPassword: ''
+})
+
+// Check if passwords match
+const passwordsMatch = computed(() => {
+  if (!signupForm.value.confirmPassword) return true // Don't show error until user starts typing
+  return signupForm.value.password === signupForm.value.confirmPassword
 })
 
 // Prevent body scroll when modal is open
@@ -187,6 +207,18 @@ function closeModal() {
   emit('update:modelValue', false)
 }
 
+// Handle confirm password blur
+function handleConfirmPasswordBlur(event: Event) {
+  const input = event.target as HTMLInputElement
+  if (signupForm.value.confirmPassword && !passwordsMatch.value) {
+    input.style.borderColor = '#ef4444'
+    input.style.boxShadow = 'none'
+  } else {
+    input.style.borderColor = '#d1d5db'
+    input.style.boxShadow = 'none'
+  }
+}
+
 // Form handlers
 function handleLogin() {
   // TODO: Implement login logic
@@ -196,6 +228,11 @@ function handleLogin() {
 }
 
 function handleSignup() {
+  // Validate passwords match
+  if (!passwordsMatch.value) {
+    return
+  }
+  
   // TODO: Implement signup logic
   console.log('Signup:', signupForm.value)
   // For now, just close the modal
