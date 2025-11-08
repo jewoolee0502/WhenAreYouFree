@@ -17,7 +17,7 @@
                 <path fill-rule="evenodd" d="M6 2a1 1 0 00-1 1v1H4a2 2 0 00-2 2v10a2 2 0 002 2h12a2 2 0 002-2V6a2 2 0 00-2-2h-1V3a1 1 0 10-2 0v1H7V3a1 1 0 00-1-1zm0 5a1 1 0 000 2h8a1 1 0 100-2H6z" clip-rule="evenodd" />
               </svg>
             </div>
-            <h1 style="font-size: 1.25rem; font-weight: 700; background: linear-gradient(135deg, #16a34a, #059669); -webkit-background-clip: text; -webkit-text-fill-color: transparent; background-clip: text; margin: 0;">WhenAreYouFree</h1>
+            <h1 class="nav-title" style="font-size: 1.25rem; font-weight: 700; background: linear-gradient(135deg, #16a34a, #059669); -webkit-background-clip: text; -webkit-text-fill-color: transparent; background-clip: text; margin: 0;">WhenAreYouFree</h1>
           </div>
           <div style="display: flex; align-items: center;">
             <button @click="showModal = true" style="padding: 0.5rem 1.25rem; font-size: 0.875rem; background: transparent; border: 1px solid #e5e7eb; border-radius: 0.5rem; color: #374151; cursor: pointer; transition: all 0.2s; font-weight: 500;" onmouseover="this.style.borderColor='#16a34a'; this.style.color='#16a34a'" onmouseout="this.style.borderColor='#e5e7eb'; this.style.color='#374151'">Sign in</button>
@@ -27,25 +27,26 @@
     </nav>
 
     <!-- Hero Section -->
-    <section style="padding: 2rem 1rem 4rem; text-align: center; position: relative; z-index: 1;">
+    <section class="hero-section" style="padding: 2rem 1rem 4rem; text-align: center; position: relative; z-index: 1;">
       <div style="max-width: 896px; margin: 0 auto;">
         <!-- Badge -->
         <div style="display: inline-flex; align-items: center; gap: 0.5rem; padding: 0.5rem 1rem; background: rgba(22, 163, 74, 0.1); border-radius: 2rem; margin-bottom: 2rem; border: 1px solid rgba(22, 163, 74, 0.2);">
           <svg style="width: 1rem; height: 1rem; color: #16a34a;" fill="currentColor" viewBox="0 0 20 20">
             <path fill-rule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clip-rule="evenodd" />
           </svg>
-          <span style="font-size: 0.875rem; color: #16a34a; font-weight: 600;">It's free! No credit card required</span>
+          <span class="badge-text" style="font-size: 0.875rem; color: #16a34a; font-weight: 600;">It's free! No credit card required</span>
         </div>
 
-        <h2 style="font-size: 3.5rem; font-weight: 800; background: linear-gradient(135deg, #111827, #4b5563); -webkit-background-clip: text; -webkit-text-fill-color: transparent; background-clip: text; margin: 0 0 1.5rem; line-height: 1.1; letter-spacing: -0.02em;">
+        <h2 class="hero-title" style="font-size: 3.5rem; font-weight: 800; background: linear-gradient(135deg, #111827, #4b5563); -webkit-background-clip: text; -webkit-text-fill-color: transparent; background-clip: text; margin: 0 0 1.5rem; line-height: 1.1; letter-spacing: -0.02em;">
           WhenAreYouFree
         </h2>
-        <p style="font-size: 1.375rem; color: #6b7280; margin: 0 0 2.5rem; line-height: 1.7; max-width: 700px; margin-left: auto; margin-right: auto;">
+        <p class="hero-subtitle" style="font-size: 1.375rem; color: #6b7280; margin: 0 0 2.5rem; line-height: 1.7; max-width: 700px; margin-left: auto; margin-right: auto;">
           Coordinate group hangouts and meetings without the back and forth. Integrates seamlessly with your calendar.
         </p>
         
         <div style="display: flex; gap: 1rem; justify-content: center; align-items: center; flex-wrap: wrap; margin-bottom: 1.5rem;">
           <button 
+            class="hero-button"
             style="padding: 1rem 2.5rem; font-size: 1.125rem; font-weight: 600; background: linear-gradient(135deg, #16a34a, #059669); color: white; border: none; border-radius: 0.75rem; cursor: pointer; box-shadow: 0 10px 15px -3px rgba(22, 163, 74, 0.3), 0 4px 6px -2px rgba(22, 163, 74, 0.2); transition: all 0.3s; position: relative; overflow: hidden;"
             onmouseover="this.style.transform='translateY(-2px)'; this.style.boxShadow='0 20px 25px -5px rgba(22, 163, 74, 0.4), 0 10px 10px -5px rgba(22, 163, 74, 0.3)'"
             onmouseout="this.style.transform='translateY(0)'; this.style.boxShadow='0 10px 15px -3px rgba(22, 163, 74, 0.3), 0 4px 6px -2px rgba(22, 163, 74, 0.2)'"
@@ -349,6 +350,82 @@ function getDateStyle(date: number | string, theme: 'light' | 'dark'): string {
   }
   50% {
     transform: translateY(-10px);
+  }
+}
+
+/* Mobile Responsive Styles */
+@media (max-width: 768px) {
+  /* Main heading - WhenAreYouFree */
+  .hero-title {
+    font-size: 2rem !important;
+    line-height: 1.2 !important;
+  }
+  
+  /* Subtitle text */
+  .hero-subtitle {
+    font-size: 1rem !important;
+    line-height: 1.6 !important;
+  }
+  
+  /* Navigation title */
+  .nav-title {
+    font-size: 1rem !important;
+  }
+  
+  /* Badge text */
+  .badge-text {
+    font-size: 0.75rem !important;
+  }
+  
+  /* Hero button */
+  .hero-button {
+    font-size: 0.875rem !important;
+    padding: 0.75rem 1.5rem !important;
+  }
+  
+  /* Hero section padding */
+  .hero-section {
+    padding: 1.5rem 0.75rem 2rem !important;
+  }
+  
+  /* Features section heading */
+  h3 {
+    font-size: 1.5rem !important;
+  }
+  
+  /* Features section subtitle */
+  section p {
+    font-size: 0.9375rem !important;
+  }
+  
+  /* Navigation padding */
+  nav > div {
+    padding-left: 1rem !important;
+    padding-right: 1rem !important;
+  }
+}
+
+/* Extra small mobile devices */
+@media (max-width: 480px) {
+  .hero-title {
+    font-size: 1.75rem !important;
+  }
+  
+  .hero-subtitle {
+    font-size: 0.9375rem !important;
+  }
+  
+  .nav-title {
+    font-size: 0.875rem !important;
+  }
+  
+  .hero-button {
+    font-size: 0.8125rem !important;
+    padding: 0.625rem 1.25rem !important;
+  }
+  
+  .badge-text {
+    font-size: 0.6875rem !important;
   }
 }
 </style>
