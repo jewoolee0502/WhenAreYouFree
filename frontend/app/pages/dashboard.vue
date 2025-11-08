@@ -83,8 +83,55 @@
         </div>
       </div>
 
-      <!-- Calendar Section -->
-      <div style="background: white; border: 1px solid #e5e7eb; border-radius: 0.75rem; overflow: hidden; box-shadow: 0 1px 3px 0 rgba(0, 0, 0, 0.1);">
+      <!-- Action Buttons -->
+      <div style="display: flex; gap: 1rem; margin-bottom: 1.5rem; flex-wrap: wrap;">
+        <button 
+          @click="copyLink"
+          :disabled="copyLinkLoading"
+          :style="{
+            display: 'flex',
+            alignItems: 'center',
+            gap: '0.5rem',
+            padding: '0.75rem 1.5rem',
+            fontSize: '0.875rem',
+            fontWeight: '600',
+            background: 'white',
+            border: '1px solid #d1d5db',
+            borderRadius: '0.5rem',
+            color: copyLinkLoading ? '#9ca3af' : '#374151',
+            cursor: copyLinkLoading ? 'not-allowed' : 'pointer',
+            transition: 'all 0.2s',
+            opacity: copyLinkLoading ? 0.6 : 1
+          }"
+          @mouseenter="handleCopyLinkHover($event, true)"
+          @mouseleave="handleCopyLinkHover($event, false)"
+        >
+          <svg v-if="!copyLinkSuccess" style="width: 1rem; height: 1rem;" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 16H6a2 2 0 01-2-2V6a2 2 0 012-2h8a2 2 0 012 2v2m-6 12h8a2 2 0 002-2v-8a2 2 0 00-2-2h-8a2 2 0 00-2 2v8a2 2 0 002 2z" />
+          </svg>
+          <svg v-else style="width: 1rem; height: 1rem; color: #16a34a;" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7" />
+          </svg>
+          <span>{{ copyLinkSuccess ? 'Link copied!' : 'Copy link' }}</span>
+        </button>
+        
+        <button 
+          @click="addAvailability"
+          style="display: flex; align-items: center; gap: 0.5rem; padding: 0.75rem 1.5rem; font-size: 0.875rem; font-weight: 600; background: linear-gradient(135deg, #16a34a, #059669); color: white; border: none; border-radius: 0.5rem; cursor: pointer; transition: all 0.2s; box-shadow: 0 1px 3px 0 rgba(22, 163, 74, 0.3);"
+          onmouseover="this.style.transform='translateY(-1px)'; this.style.boxShadow='0 4px 6px -1px rgba(22, 163, 74, 0.4)'"
+          onmouseout="this.style.transform='translateY(0)'; this.style.boxShadow='0 1px 3px 0 rgba(22, 163, 74, 0.3)'"
+        >
+          <svg style="width: 1rem; height: 1rem;" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4" />
+          </svg>
+          <span>Add availability</span>
+        </button>
+      </div>
+
+      <!-- Calendar and Responses Section -->
+      <div class="calendar-responses-grid" style="display: grid; grid-template-columns: 1fr 320px; gap: 1.5rem; align-items: start;">
+        <!-- Calendar Section -->
+        <div style="background: white; border: 1px solid #e5e7eb; border-radius: 0.75rem; overflow: hidden; box-shadow: 0 1px 3px 0 rgba(0, 0, 0, 0.1);">
         <!-- Calendar Header -->
         <div :style="{ display: 'grid', gridTemplateColumns: `80px repeat(${numberOfDates}, 1fr)`, borderBottom: '1px solid #e5e7eb', background: '#f9fafb' }">
           <div style="padding: 1rem; border-right: 1px solid #e5e7eb;"></div>
@@ -161,6 +208,94 @@
             <option value="24h">24h</option>
           </select>
         </div>
+        </div>
+
+        <!-- Responses Section -->
+        <div class="responses-section" style="background: white; border: 1px solid #e5e7eb; border-radius: 0.75rem; overflow: hidden; box-shadow: 0 1px 3px 0 rgba(0, 0, 0, 0.1); position: sticky; top: 5rem;">
+          <div style="padding: 1.5rem; border-bottom: 1px solid #e5e7eb; background: #f9fafb;">
+            <h3 style="font-size: 1.125rem; font-weight: 700; color: #111827; margin: 0 0 0.5rem;">Responses</h3>
+            <p style="font-size: 0.875rem; color: #6b7280; margin: 0;">{{ responses.length }} participant{{ responses.length !== 1 ? 's' : '' }}</p>
+          </div>
+          
+          <div style="max-height: 600px; overflow-y: auto;">
+            <div 
+              v-for="(response, index) in responses" 
+              :key="index"
+              style="padding: 1rem 1.5rem; border-bottom: 1px solid #e5e7eb; display: flex; align-items: center; gap: 0.75rem; transition: background-color 0.2s;"
+              :style="{ borderBottom: index === responses.length - 1 ? 'none' : '1px solid #e5e7eb' }"
+              @mouseenter="$event.currentTarget.style.backgroundColor='#f9fafb'"
+              @mouseleave="$event.currentTarget.style.backgroundColor='white'"
+            >
+              <!-- Avatar -->
+              <div 
+                :style="{
+                  width: '2.5rem',
+                  height: '2.5rem',
+                  borderRadius: '50%',
+                  background: response.responded ? 'linear-gradient(135deg, #16a34a, #059669)' : '#e5e7eb',
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  color: response.responded ? 'white' : '#9ca3af',
+                  fontWeight: '600',
+                  fontSize: '0.875rem',
+                  flexShrink: 0
+                }"
+              >
+                {{ response.name.charAt(0).toUpperCase() }}
+              </div>
+              
+              <!-- Name and Status -->
+              <div style="flex: 1; min-width: 0;">
+                <div style="font-size: 0.875rem; font-weight: 600; color: #111827; margin-bottom: 0.25rem;">{{ response.name }}</div>
+                <div style="display: flex; align-items: center; gap: 0.5rem;">
+                  <span 
+                    :style="{
+                      fontSize: '0.75rem',
+                      color: response.responded ? '#16a34a' : '#6b7280',
+                      fontWeight: '500'
+                    }"
+                  >
+                    {{ response.responded ? 'Responded' : 'No response' }}
+                  </span>
+                  <span v-if="response.responded" style="font-size: 0.75rem; color: #9ca3af;">
+                    • {{ response.responseTime }}
+                  </span>
+                </div>
+              </div>
+              
+              <!-- Status Icon -->
+              <div style="flex-shrink: 0;">
+                <svg 
+                  v-if="response.responded" 
+                  style="width: 1.25rem; height: 1.25rem; color: #16a34a;" 
+                  fill="none" 
+                  stroke="currentColor" 
+                  viewBox="0 0 24 24"
+                >
+                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7" />
+                </svg>
+                <svg 
+                  v-else 
+                  style="width: 1.25rem; height: 1.25rem; color: #9ca3af;" 
+                  fill="none" 
+                  stroke="currentColor" 
+                  viewBox="0 0 24 24"
+                >
+                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
+                </svg>
+              </div>
+            </div>
+            
+            <!-- Empty State -->
+            <div v-if="responses.length === 0" style="padding: 3rem 1.5rem; text-align: center;">
+              <svg style="width: 3rem; height: 3rem; color: #d1d5db; margin: 0 auto 1rem;" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0zm6 3a2 2 0 11-4 0 2 2 0 014 0zM7 10a2 2 0 11-4 0 2 2 0 014 0z" />
+              </svg>
+              <p style="font-size: 0.875rem; color: #6b7280; margin: 0;">No participants yet</p>
+            </div>
+          </div>
+        </div>
       </div>
     </div>
   </div>
@@ -187,6 +322,26 @@ const startTime = ref('09:00')
 const endTime = ref('16:00')
 const timezone = ref('America/Los_Angeles')
 const timeFormat = ref('12h')
+
+// Button states
+const copyLinkLoading = ref(false)
+const copyLinkSuccess = ref(false)
+
+// Responses data
+interface Response {
+  name: string
+  responded: boolean
+  responseTime?: string
+}
+
+const responses = ref<Response[]>([
+  { name: 'John Doe', responded: true, responseTime: '2 hours ago' },
+  { name: 'Jane Smith', responded: true, responseTime: '1 day ago' },
+  { name: 'Bob Johnson', responded: false },
+  { name: 'Alice Williams', responded: true, responseTime: '3 hours ago' },
+  { name: 'Charlie Brown', responded: false },
+  { name: 'Diana Prince', responded: true, responseTime: '5 minutes ago' }
+])
 
 // Initialize start date to today if not set
 onMounted(() => {
@@ -274,10 +429,87 @@ function handleCellClick(date: { date: Date; dateStr: string; dayName: string },
   // You can add event creation logic here
 }
 
+// Copy link to clipboard
+async function copyLink() {
+  if (copyLinkLoading.value) return
+  
+  copyLinkLoading.value = true
+  copyLinkSuccess.value = false
+  
+  try {
+    // Get the current page URL
+    const url = window.location.href
+    
+    // Copy to clipboard
+    await navigator.clipboard.writeText(url)
+    
+    copyLinkSuccess.value = true
+    
+    // Reset success message after 2 seconds
+    setTimeout(() => {
+      copyLinkSuccess.value = false
+    }, 2000)
+  } catch (err) {
+    console.error('Failed to copy link:', err)
+    // Fallback for older browsers
+    const textArea = document.createElement('textarea')
+    textArea.value = window.location.href
+    textArea.style.position = 'fixed'
+    textArea.style.opacity = '0'
+    document.body.appendChild(textArea)
+    textArea.select()
+    try {
+      document.execCommand('copy')
+      copyLinkSuccess.value = true
+      setTimeout(() => {
+        copyLinkSuccess.value = false
+      }, 2000)
+    } catch (fallbackErr) {
+      console.error('Fallback copy failed:', fallbackErr)
+    }
+    document.body.removeChild(textArea)
+  } finally {
+    copyLinkLoading.value = false
+  }
+}
+
+// Handle copy link button hover
+function handleCopyLinkHover(event: MouseEvent, isEntering: boolean) {
+  if (copyLinkLoading.value) return
+  const target = event.target as HTMLElement
+  if (isEntering) {
+    target.style.borderColor = '#16a34a'
+    target.style.color = '#16a34a'
+  } else {
+    target.style.borderColor = '#d1d5db'
+    target.style.color = '#374151'
+  }
+}
+
+// Add availability
+function addAvailability() {
+  // You can add availability modal or logic here
+  console.log('Add availability clicked')
+  // For now, this could open a modal or navigate to an availability page
+}
+
 </script>
 
 <style scoped>
 /* Mobile Responsive Styles */
+@media (max-width: 1024px) {
+  /* Stack calendar and responses on tablets and smaller */
+  .calendar-responses-grid {
+    grid-template-columns: 1fr !important;
+  }
+  
+  /* Remove sticky positioning on mobile */
+  .responses-section {
+    position: relative !important;
+    top: auto !important;
+  }
+}
+
 @media (max-width: 768px) {
   div[style*="padding: 2rem"] {
     padding: 1rem !important;
