@@ -53,10 +53,12 @@
           data-calendar-cell
           class="calendar-cell"
           :class="{ 
+            'is-manual-mode': manualSelectionMode,
             'is-selected': isCellSelected(date, timeSlot),
             'is-in-drag-range': isDragging && isCellInDragRange(date, timeSlot),
             'is-drag-selecting': isDragging && isCellInDragRange(date, timeSlot) && isDragSelecting,
-            'is-hour-start': isFirstSlotOfHour(timeIndex)
+            'is-hour-start': isFirstSlotOfHour(timeIndex),
+            'is-hovered': isCellHovered(date, timeSlot)
           }"
           :style="{ gridRow: timeIndex + 1, gridColumn: dateIndex + 2 }"
           @mouseenter="handleCellHover($event, true, date, timeSlot)"
@@ -187,6 +189,10 @@ const dragStartCell = ref<{ date: { date: Date; dateStr: string; dayName: string
 const dragEndCell = ref<{ date: { date: Date; dateStr: string; dayName: string }, timeSlot: string } | null>(null)
 const isDragSelecting = ref(false)
 const hasDragged = ref(false)
+const clickHandledByMouseUp = ref(false)
+
+// Hover state
+const hoveredCell = ref<{ date: { date: Date; dateStr: string; dayName: string }, timeSlot: string } | null>(null)
 
 // Dynamic height calculation
 const calendarContainerRef = ref<HTMLElement | null>(null)
@@ -277,6 +283,13 @@ function isCellSelected(date: { date: Date; dateStr: string; dayName: string }, 
   return props.selectedSlots?.has(key) ?? false
 }
 
+function isCellHovered(date: { date: Date; dateStr: string; dayName: string }, timeSlot: string): boolean {
+  if (!props.manualSelectionMode) return false
+  if (!hoveredCell.value) return false
+  return hoveredCell.value.date.date.getTime() === date.date.getTime() && 
+         hoveredCell.value.timeSlot === timeSlot
+}
+
 function isToday(date: Date): boolean {
   const today = new Date()
   return date.getDate() === today.getDate() &&
@@ -324,6 +337,17 @@ function handleCellHover(event: MouseEvent, isEntering: boolean, date?: { date: 
   
   if (isDragging.value && isEntering && date && timeSlot) {
     dragEndCell.value = { date, timeSlot }
+    // Don't show hover effect while dragging
+    return
+  }
+  
+  // Track hover state for visual feedback (only when not dragging)
+  if (!isDragging.value) {
+    if (isEntering && date && timeSlot) {
+      hoveredCell.value = { date, timeSlot }
+    } else {
+      hoveredCell.value = null
+    }
   }
 }
 
@@ -336,6 +360,7 @@ function handleCellMouseDown(event: MouseEvent, date: { date: Date; dateStr: str
   dragStartCell.value = { date, timeSlot }
   dragEndCell.value = { date, timeSlot }
   isDragSelecting.value = !isCellSelected(date, timeSlot)
+  hoveredCell.value = null // Clear hover state when dragging starts
   
   document.addEventListener('mousemove', handleGlobalMouseMove)
   document.addEventListener('mouseup', handleGlobalMouseUp)
@@ -389,7 +414,12 @@ function handleGlobalMouseUp(event: MouseEvent) {
   document.removeEventListener('mouseup', handleGlobalMouseUp)
   
   if (!wasDragging && startCell) {
+    clickHandledByMouseUp.value = true
     handleCellClick(startCell.date, startCell.timeSlot)
+    // Reset flag after nextTick to allow click event to check it
+    nextTick(() => {
+      clickHandledByMouseUp.value = false
+    })
   }
 }
 
@@ -420,6 +450,11 @@ function applyDragSelection() {
 }
 
 function handleCellClick(date: { date: Date; dateStr: string; dayName: string }, timeSlot: string) {
+  // If click was already handled by mouseup, ignore this click event
+  if (clickHandledByMouseUp.value) {
+    return
+  }
+  
   if (props.manualSelectionMode) {
     const isCurrentlySelected = isCellSelected(date, timeSlot)
     emit('cellSelect', date, timeSlot, !isCurrentlySelected)
@@ -447,7 +482,7 @@ function handleCellClick(date: { date: Date; dateStr: string; dayName: string },
 .calendar-header {
   display: grid;
   background: #f5f5f5;
-  border-bottom: 2px solid #d0d0d0;
+  border-bottom: 2px solid #b0b0b0;
   position: sticky;
   top: 0;
   z-index: 10;
@@ -455,14 +490,14 @@ function handleCellClick(date: { date: Date; dateStr: string; dayName: string },
 
 .header-corner-cell {
   padding: 12px 8px;
-  border-right: 1px solid #e0e0e0;
+  border-right: 1px solid #b0b0b0;
   background: #f5f5f5;
 }
 
 .header-date-cell {
   padding: 10px 8px;
   text-align: center;
-  border-right: 1px solid #e0e0e0;
+  border-right: 1px solid #b0b0b0;
   background: #f5f5f5;
   transition: background-color 0.15s;
   display: flex;
@@ -483,8 +518,8 @@ function handleCellClick(date: { date: Date; dateStr: string; dayName: string },
 .hour-label-cell {
   padding: 8px;
   text-align: center;
-  border-right: 1px solid #e0e0e0;
-  border-bottom: 1px solid #e0e0e0;
+  border-right: 1px solid #b0b0b0;
+  border-bottom: 1px solid #b0b0b0;
   background: #fafafa;
   display: flex;
   align-items: center;
@@ -540,8 +575,8 @@ function handleCellClick(date: { date: Date; dateStr: string; dayName: string },
 
 
 .calendar-cell {
-  border-right: 1px solid #e0e0e0;
-  border-bottom: 1px solid #e0e0e0;
+  border-right: 1px solid #b0b0b0;
+  border-bottom: 1px solid #b0b0b0;
   cursor: pointer;
   transition: background-color 0.1s;
   position: relative;
@@ -554,17 +589,36 @@ function handleCellClick(date: { date: Date; dateStr: string; dayName: string },
 
 /* Hour boundary styling */
 .calendar-cell.is-hour-start {
-  border-top: 2px solid #d0d0d0;
+  border-top: 2px solid #b0b0b0;
 }
 
 .calendar-cell.is-hour-start:first-child {
   border-top: none;
 }
 
-/* When2meet-style selection */
+/* Manual mode: all selectable slots are pastel red */
+.calendar-cell.is-manual-mode {
+  background: #fecaca;
+}
+
+/* Hover effect for manual mode slots */
+.calendar-cell.is-manual-mode.is-hovered:not(.is-selected) {
+  background: #fca5a5;
+}
+
+/* Selected slots in manual mode: pastel green */
+.calendar-cell.is-manual-mode.is-selected {
+  background: #a5d6a7;
+}
+
+/* Hover effect for selected slots */
+.calendar-cell.is-manual-mode.is-selected.is-hovered {
+  background: #86c988;
+}
+
+/* When2meet-style selection (for non-manual mode) */
 .calendar-cell.is-selected {
-  background: #4caf50;
-  border-color: #4caf50;
+  background: #a5d6a7;
 }
 
 /* Drag selection preview */

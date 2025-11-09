@@ -81,6 +81,26 @@
             </svg>
             <span>Add availability</span>
           </button>
+
+          <!-- Cancel and Save Buttons (shown when in manual selection mode) -->
+          <div v-if="isManualSelectionMode" style="display: flex; gap: 0.75rem;">
+            <button 
+              @click="handleCancelManualSelection"
+              style="flex: 1; padding: 0.75rem 1.5rem; font-size: 0.875rem; font-weight: 600; background: white; border: 1px solid #dc2626; border-radius: 0.5rem; color: #dc2626; cursor: pointer; transition: all 0.2s;"
+              onmouseover="this.style.backgroundColor='#fef2f2'; this.style.transform='translateY(-1px)'"
+              onmouseout="this.style.backgroundColor='white'; this.style.transform='translateY(0)'"
+            >
+              Cancel
+            </button>
+            <button 
+              @click="handleSaveManualSelection"
+              style="flex: 1; padding: 0.75rem 1.5rem; font-size: 0.875rem; font-weight: 600; background: white; border: 1px solid #16a34a; border-radius: 0.5rem; color: #16a34a; cursor: pointer; transition: all 0.2s;"
+              onmouseover="this.style.backgroundColor='#f0fdf4'; this.style.transform='translateY(-1px)'"
+              onmouseout="this.style.backgroundColor='white'; this.style.transform='translateY(0)'"
+            >
+              Save
+            </button>
+          </div>
         </div>
       </div>
 
@@ -557,6 +577,21 @@ function handleManualSelection() {
   isManualSelectionMode.value = true
   // Optionally clear previous selections
   // selectedAvailabilitySlots.value.clear()
+}
+
+// Handle cancel manual selection
+function handleCancelManualSelection() {
+  isManualSelectionMode.value = false
+  // Optionally clear selections when canceling
+  selectedAvailabilitySlots.value.clear()
+}
+
+// Handle save manual selection
+function handleSaveManualSelection() {
+  // TODO: Implement save logic to persist the selected availability slots
+  console.log('Saving availability slots:', selectedAvailabilitySlots.value)
+  isManualSelectionMode.value = false
+  // You can add API call here to save the availability
 }
 
 // Copy link to clipboard
