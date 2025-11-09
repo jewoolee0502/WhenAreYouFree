@@ -97,6 +97,9 @@
         <Responses :responses="responses" />
       </div>
     </div>
+
+    <!-- Add Availability Modal -->
+    <AddAvailability v-model="showAddAvailabilityModal" />
   </div>
 </template>
 
@@ -137,6 +140,7 @@ const isDateInputFocused = ref(false)
 // Button states
 const copyLinkLoading = ref(false)
 const copyLinkSuccess = ref(false)
+const showAddAvailabilityModal = ref(false)
 
 // Responses data
 interface Response {
@@ -586,9 +590,7 @@ function handleSignOut() {
 
 // Add availability
 function addAvailability() {
-  // You can add availability modal or logic here
-  console.log('Add availability clicked')
-  // For now, this could open a modal or navigate to an availability page
+  showAddAvailabilityModal.value = true
 }
 
 </script>
