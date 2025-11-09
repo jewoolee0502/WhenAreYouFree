@@ -1,171 +1,39 @@
 <template>
   <div style="min-height: 100vh; background: #ffffff; font-family: system-ui, -apple-system, sans-serif;">
     <!-- Navigation -->
-    <nav style="background-color: rgba(255, 255, 255, 0.8); backdrop-filter: blur(10px); position: sticky; top: 0; z-index: 50; width: 100%; border-bottom: 1px solid #e5e7eb;">
-      <div style="width: 100%; padding: 0 2rem;">
-        <div style="display: flex; justify-content: space-between; align-items: center; height: 4rem;">
-          <div style="display: flex; align-items: center; gap: 0.5rem; cursor: pointer;">
-            <div style="width: 2rem; height: 2rem; background: linear-gradient(135deg, #16a34a, #10b981); border-radius: 0.5rem; display: flex; align-items: center; justify-content: center; box-shadow: 0 4px 6px -1px rgba(22, 163, 74, 0.3);">
-              <svg style="width: 1.25rem; height: 1.25rem; color: white;" fill="currentColor" viewBox="0 0 20 20">
-                <path fill-rule="evenodd" d="M6 2a1 1 0 00-1 1v1H4a2 2 0 00-2 2v10a2 2 0 002 2h12a2 2 0 002-2V6a2 2 0 00-2-2h-1V3a1 1 0 10-2 0v1H7V3a1 1 0 00-1-1zm0 5a1 1 0 000 2h8a1 1 0 100-2H6z" clip-rule="evenodd" />
-              </svg>
-            </div>
-            <h1 style="font-size: 1.25rem; font-weight: 700; background: linear-gradient(135deg, #16a34a, #059669); -webkit-background-clip: text; -webkit-text-fill-color: transparent; background-clip: text; margin: 0;">WhenAreYouFree</h1>
-          </div>
-          <div style="display: flex; align-items: center; gap: 1rem;">
-            <NuxtLink to="/" style="text-decoration: none; color: #374151; font-size: 0.875rem; font-weight: 500;">Home</NuxtLink>
-            <button style="padding: 0.5rem 1.25rem; font-size: 0.875rem; background: transparent; border: 1px solid #e5e7eb; border-radius: 0.5rem; color: #374151; cursor: pointer; transition: all 0.2s; font-weight: 500;" onmouseover="this.style.borderColor='#16a34a'; this.style.color='#16a34a'" onmouseout="this.style.borderColor='#e5e7eb'; this.style.color='#374151'">Sign out</button>
-          </div>
-        </div>
-      </div>
-    </nav>
+    <Navbar variant="dashboard" @sign-out="handleSignOut" />
 
     <!-- Dashboard Content -->
     <div style="padding: 2rem; max-width: 1400px; margin: 0 auto;">
       <!-- Settings and Buttons Section -->
       <div class="settings-buttons-grid" style="display: grid; grid-template-columns: 1fr 320px; gap: 1.5rem; margin-bottom: 1.5rem; align-items: start;">
         <!-- Calendar Settings -->
-        <div style="background: #f9fafb; border: 1px solid #e5e7eb; border-radius: 0.75rem; padding: 1.5rem;">
-          <h2 style="font-size: 1.5rem; font-weight: 700; color: #111827; margin: 0 0 1.5rem;">Calendar Settings</h2>
-          
-          <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(250px, 1fr)); gap: 1.5rem;">
-            <!-- Dates Selection -->
-            <div style="grid-column: 1 / -1;">
-              <label style="display: block; font-size: 0.875rem; font-weight: 600; color: #374151; margin-bottom: 0.5rem;">Dates</label>
-              <div style="position: relative; display: inline-block;">
-                <input 
-                  type="text"
-                  v-model="dateInputText"
-                  @input="handleDateInput"
-                  @focus="handleDateInputFocus"
-                  @blur="handleDateInputBlur"
-                  @click.stop="showDatePicker = true"
-                  data-date-picker-button
-                  placeholder="YYYY/MM/DD - YYYY/MM/DD"
-                  :style="{
-                    width: dateInputWidth,
-                    padding: '0.625rem 2.5rem 0.625rem 0.75rem',
-                    border: `1px solid ${showDatePicker ? '#16a34a' : '#d1d5db'}`,
-                    borderRadius: '0.5rem',
-                    fontSize: '0.875rem',
-                    color: '#111827',
-                    background: 'white',
-                    cursor: 'pointer',
-                    transition: 'border-color 0.2s, width 0.2s'
-                  }"
-                />
-                <div 
-                  @click.stop="showDatePicker = !showDatePicker"
-                  data-date-picker-button
-                  style="position: absolute; right: 0.75rem; top: 50%; transform: translateY(-50%); cursor: pointer; pointer-events: auto; display: flex; align-items: center; justify-content: center; z-index: 1;"
-                >
-                  <svg 
-                    style="width: 1rem; height: 1rem; transition: transform 0.2s; color: #6b7280;" 
-                    :style="{ transform: showDatePicker ? 'rotate(180deg)' : 'rotate(0deg)' }" 
-                    fill="none" 
-                    stroke="currentColor" 
-                    viewBox="0 0 24 24"
-                  >
-                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7" />
-                  </svg>
-                </div>
-                
-                <!-- Date Picker Calendar -->
-                <div 
-                  v-if="showDatePicker"
-                  class="date-picker-calendar"
-                  @click.stop
-                  style="position: absolute; top: calc(100% + 0.5rem); left: 0; background: white; border: 1px solid #e5e7eb; border-radius: 0.75rem; padding: 1.5rem; box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.1), 0 4px 6px -2px rgba(0, 0, 0, 0.05); z-index: 100; min-width: 300px;"
-                >
-                  <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 1rem;">
-                    <button 
-                      @click="previousMonth"
-                      @mouseenter="handleMonthButtonHover($event, true)"
-                      @mouseleave="handleMonthButtonHover($event, false)"
-                      style="background: none; border: none; color: #6b7280; cursor: pointer; padding: 0.25rem; font-size: 1rem; transition: color 0.2s;"
-                    >
-                      &lt;
-                    </button>
-                    <h3 style="font-size: 1rem; font-weight: 600; color: #111827; margin: 0;">{{ currentMonthName }} {{ currentYear }}</h3>
-                    <button 
-                      @click="nextMonth"
-                      @mouseenter="handleMonthButtonHover($event, true)"
-                      @mouseleave="handleMonthButtonHover($event, false)"
-                      style="background: none; border: none; color: #6b7280; cursor: pointer; padding: 0.25rem; font-size: 1rem; transition: color 0.2s;"
-                    >
-                      &gt;
-                    </button>
-                  </div>
-                  
-                  <div style="display: grid; grid-template-columns: repeat(7, 1fr); gap: 0.25rem; margin-bottom: 0.5rem;">
-                    <div v-for="day in weekDays" :key="day" style="text-align: center; font-size: 0.75rem; font-weight: 600; color: #9ca3af; padding: 0.5rem; text-transform: uppercase; letter-spacing: 0.05em;">
-                      {{ day }}
-                    </div>
-                  </div>
-                  
-                  <div style="display: grid; grid-template-columns: repeat(7, 1fr); gap: 0.25rem;">
-                    <div 
-                      v-for="(date, index) in calendarDays" 
-                      :key="index"
-                      @mousedown="startDateSelection(date)"
-                      @mouseenter="continueDateSelection(date)"
-                      @mouseup="endDateSelection"
-                      :style="getDatePickerCellStyle(date)"
-                      style="padding: 0.5rem; text-align: center; font-size: 0.875rem; font-weight: 500; border-radius: 0.5rem; cursor: pointer; transition: all 0.2s; user-select: none;"
-                    >
-                      {{ date ? date.getDate() : '' }}
-                    </div>
-                  </div>
-                  
-                  <div style="margin-top: 1rem; padding-top: 1rem; border-top: 1px solid #e5e7eb; display: flex; gap: 0.5rem; justify-content: flex-end;">
-                    <button 
-                      @click="clearSelection"
-                      @mouseenter="handleButtonHover($event, true, '#16a34a')"
-                      @mouseleave="handleButtonHover($event, false, '#d1d5db')"
-                      style="padding: 0.5rem 1rem; font-size: 0.875rem; background: transparent; border: 1px solid #d1d5db; border-radius: 0.5rem; color: #374151; cursor: pointer; transition: all 0.2s;"
-                    >
-                      Clear
-                    </button>
-                    <button 
-                      @click="showDatePicker = false"
-                      @mouseenter="handleDoneButtonHover($event, true)"
-                      @mouseleave="handleDoneButtonHover($event, false)"
-                      style="padding: 0.5rem 1rem; font-size: 0.875rem; background: linear-gradient(135deg, #16a34a, #059669); border: none; border-radius: 0.5rem; color: white; cursor: pointer; transition: all 0.2s; font-weight: 600;"
-                    >
-                      Done
-                    </button>
-                  </div>
-                </div>
-              </div>
-            </div>
-
-            <!-- Start Time -->
-            <div>
-              <label style="display: block; font-size: 0.875rem; font-weight: 600; color: #374151; margin-bottom: 0.5rem;">Start Time</label>
-              <input 
-                type="time" 
-                v-model="startTime"
-                @change="updateCalendar"
-                style="width: 100%; padding: 0.625rem 0.75rem; border: 1px solid #d1d5db; border-radius: 0.5rem; font-size: 0.875rem; color: #111827; background: white; cursor: pointer; transition: border-color 0.2s;"
-                onfocus="this.style.borderColor='#16a34a'; this.style.outline='none'"
-                onblur="this.style.borderColor='#d1d5db'"
-              />
-            </div>
-
-            <!-- End Time -->
-            <div>
-              <label style="display: block; font-size: 0.875rem; font-weight: 600; color: #374151; margin-bottom: 0.5rem;">End Time</label>
-              <input 
-                type="time" 
-                v-model="endTime"
-                @change="updateCalendar"
-                style="width: 100%; padding: 0.625rem 0.75rem; border: 1px solid #d1d5db; border-radius: 0.5rem; font-size: 0.875rem; color: #111827; background: white; cursor: pointer; transition: border-color 0.2s;"
-                onfocus="this.style.borderColor='#16a34a'; this.style.outline='none'"
-                onblur="this.style.borderColor='#d1d5db'"
-              />
-            </div>
-          </div>
-        </div>
+        <CalendarSettings
+          v-model:timezone="timezone"
+          v-model:timeFormat="timeFormat"
+          v-model:dateInputText="dateInputText"
+          v-model:showDatePicker="showDatePicker"
+          v-model:startTime="startTime"
+          v-model:endTime="endTime"
+          :current-month="currentMonth"
+          :current-year="currentYear"
+          :selected-dates="selectedDates"
+          :is-selecting="isSelecting"
+          :selection-mode="selectionMode"
+          :selection-start="selectionStart"
+          :selection-end="selectionEnd"
+          :date-input-width="dateInputWidth"
+          @update-calendar="updateCalendar"
+          @date-input="handleDateInput"
+          @date-input-focus="handleDateInputFocus"
+          @date-input-blur="handleDateInputBlur"
+          @previous-month="previousMonth"
+          @next-month="nextMonth"
+          @start-date-selection="startDateSelection"
+          @continue-date-selection="continueDateSelection"
+          @end-date-selection="endDateSelection"
+          @clear-selection="clearSelection"
+        />
 
         <!-- Action Buttons -->
         <div style="display: flex; flex-direction: column; gap: 1rem;">
@@ -218,171 +86,14 @@
       <!-- Calendar and Responses Section -->
       <div class="calendar-responses-grid" style="display: grid; grid-template-columns: 1fr 320px; gap: 1.5rem; align-items: start;">
         <!-- Calendar Section -->
-        <div style="background: white; border: 1px solid #e5e7eb; border-radius: 0.75rem; overflow: hidden; box-shadow: 0 1px 3px 0 rgba(0, 0, 0, 0.1);">
-        <!-- Calendar Header -->
-        <div :style="{ display: 'grid', gridTemplateColumns: `80px repeat(${selectedDates.length}, 1fr)`, borderBottom: '1px solid #e5e7eb', background: '#f9fafb' }">
-          <div style="padding: 1rem; border-right: 1px solid #e5e7eb;"></div>
-          <div 
-            v-for="(date, index) in calendarDates" 
-            :key="index"
-            style="padding: 1rem; text-align: center; border-right: 1px solid #e5e7eb; font-weight: 600; color: #111827;"
-            :style="{ borderRight: index === calendarDates.length - 1 ? 'none' : '1px solid #e5e7eb' }"
-          >
-            <div style="font-size: 0.875rem; color: #6b7280; margin-bottom: 0.25rem;">{{ date.dayName }}</div>
-            <div style="font-size: 1rem;">{{ date.dateStr }}</div>
-          </div>
-        </div>
-
-        <!-- Calendar Grid -->
-        <div :style="{ display: 'grid', gridTemplateColumns: `80px repeat(${selectedDates.length}, 1fr)`, maxHeight: '600px', overflowY: 'auto' }">
-          <!-- Time Column -->
-          <div style="border-right: 1px solid #e5e7eb; background: #f9fafb;">
-            <div 
-              v-for="(timeSlot, index) in timeSlots" 
-              :key="index"
-              style="padding: 1rem 0.75rem; border-bottom: 1px solid #e5e7eb; text-align: right; font-size: 0.875rem; color: #6b7280; font-weight: 500; min-height: 60px; display: flex; align-items: center; justify-content: flex-end;"
-              :style="{ borderBottom: index === timeSlots.length - 1 ? 'none' : '1px solid #e5e7eb' }"
-            >
-              {{ timeSlot }}
-            </div>
-          </div>
-
-          <!-- Calendar Cells -->
-          <template v-for="(date, dateIndex) in calendarDates" :key="dateIndex">
-            <div 
-              v-for="(timeSlot, timeIndex) in timeSlots" 
-              :key="`${dateIndex}-${timeIndex}`"
-              style="border-right: 1px solid #e5e7eb; border-bottom: 1px solid #e5e7eb; min-height: 60px; cursor: pointer; transition: background-color 0.2s;"
-              :style="{ 
-                borderRight: dateIndex === calendarDates.length - 1 ? 'none' : '1px solid #e5e7eb',
-                borderBottom: timeIndex === timeSlots.length - 1 ? 'none' : '1px solid #e5e7eb'
-              }"
-              @mouseenter="handleCellHover($event, true)"
-              @mouseleave="handleCellHover($event, false)"
-              @click="handleCellClick(date, timeSlot)"
-            >
-            </div>
-          </template>
-        </div>
-
-        <!-- Calendar Footer -->
-        <div style="padding: 1rem 1.5rem; border-top: 1px solid #e5e7eb; background: #f9fafb; display: flex; align-items: center; gap: 1rem; flex-wrap: wrap;">
-          <span style="font-size: 0.875rem; color: #6b7280;">Shown in</span>
-          <select 
-            v-model="timezone"
-            style="padding: 0.5rem 0.75rem; border: 1px solid #d1d5db; border-radius: 0.5rem; font-size: 0.875rem; color: #111827; background: white; cursor: pointer; transition: border-color 0.2s;"
-            onfocus="this.style.borderColor='#16a34a'; this.style.outline='none'"
-            onblur="this.style.borderColor='#d1d5db'"
-          >
-            <option value="America/Los_Angeles">(GMT-7:00) Pacific Time</option>
-            <option value="America/New_York">(GMT-5:00) Eastern Time</option>
-            <option value="America/Chicago">(GMT-6:00) Central Time</option>
-            <option value="America/Denver">(GMT-7:00) Mountain Time</option>
-            <option value="Europe/London">(GMT+0:00) London</option>
-            <option value="Europe/Paris">(GMT+1:00) Paris</option>
-            <option value="Asia/Tokyo">(GMT+9:00) Tokyo</option>
-            <option value="UTC">UTC</option>
-          </select>
-          
-          <select 
-            v-model="timeFormat"
-            @change="updateCalendar"
-            style="padding: 0.5rem 0.75rem; border: 1px solid #d1d5db; border-radius: 0.5rem; font-size: 0.875rem; color: #111827; background: white; cursor: pointer; transition: border-color 0.2s;"
-            onfocus="this.style.borderColor='#16a34a'; this.style.outline='none'"
-            onblur="this.style.borderColor='#d1d5db'"
-          >
-            <option value="12h">12h</option>
-            <option value="24h">24h</option>
-          </select>
-        </div>
-        </div>
+        <Calendar
+          :calendar-dates="calendarDates"
+          :time-slots="timeSlots"
+          @cell-click="handleCellClick"
+        />
 
         <!-- Responses Section -->
-        <div class="responses-section" style="background: white; border: 1px solid #e5e7eb; border-radius: 0.75rem; overflow: hidden; box-shadow: 0 1px 3px 0 rgba(0, 0, 0, 0.1); position: sticky; top: 5rem;">
-          <div style="padding: 1.5rem; border-bottom: 1px solid #e5e7eb; background: #f9fafb;">
-            <h3 style="font-size: 1.125rem; font-weight: 700; color: #111827; margin: 0 0 0.5rem;">Responses</h3>
-            <p style="font-size: 0.875rem; color: #6b7280; margin: 0;">{{ responses.length }} participant{{ responses.length !== 1 ? 's' : '' }}</p>
-          </div>
-          
-          <div style="max-height: 600px; overflow-y: auto;">
-            <div 
-              v-for="(response, index) in responses" 
-              :key="index"
-              style="padding: 1rem 1.5rem; border-bottom: 1px solid #e5e7eb; display: flex; align-items: center; gap: 0.75rem; transition: background-color 0.2s;"
-              :style="{ borderBottom: index === responses.length - 1 ? 'none' : '1px solid #e5e7eb' }"
-              @mouseenter="handleResponseHover($event, true)"
-              @mouseleave="handleResponseHover($event, false)"
-            >
-              <!-- Avatar -->
-              <div 
-                :style="{
-                  width: '2.5rem',
-                  height: '2.5rem',
-                  borderRadius: '50%',
-                  background: response.responded ? 'linear-gradient(135deg, #16a34a, #059669)' : '#e5e7eb',
-                  display: 'flex',
-                  alignItems: 'center',
-                  justifyContent: 'center',
-                  color: response.responded ? 'white' : '#9ca3af',
-                  fontWeight: '600',
-                  fontSize: '0.875rem',
-                  flexShrink: 0
-                }"
-              >
-                {{ response.name.charAt(0).toUpperCase() }}
-              </div>
-              
-              <!-- Name and Status -->
-              <div style="flex: 1; min-width: 0;">
-                <div style="font-size: 0.875rem; font-weight: 600; color: #111827; margin-bottom: 0.25rem;">{{ response.name }}</div>
-                <div style="display: flex; align-items: center; gap: 0.5rem;">
-                  <span 
-                    :style="{
-                      fontSize: '0.75rem',
-                      color: response.responded ? '#16a34a' : '#6b7280',
-                      fontWeight: '500'
-                    }"
-                  >
-                    {{ response.responded ? 'Responded' : 'No response' }}
-                  </span>
-                  <span v-if="response.responded" style="font-size: 0.75rem; color: #9ca3af;">
-                    • {{ response.responseTime }}
-                  </span>
-                </div>
-              </div>
-              
-              <!-- Status Icon -->
-              <div style="flex-shrink: 0;">
-                <svg 
-                  v-if="response.responded" 
-                  style="width: 1.25rem; height: 1.25rem; color: #16a34a;" 
-                  fill="none" 
-                  stroke="currentColor" 
-                  viewBox="0 0 24 24"
-                >
-                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7" />
-                </svg>
-                <svg 
-                  v-else 
-                  style="width: 1.25rem; height: 1.25rem; color: #9ca3af;" 
-                  fill="none" 
-                  stroke="currentColor" 
-                  viewBox="0 0 24 24"
-                >
-                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
-                </svg>
-              </div>
-            </div>
-            
-            <!-- Empty State -->
-            <div v-if="responses.length === 0" style="padding: 3rem 1.5rem; text-align: center;">
-              <svg style="width: 3rem; height: 3rem; color: #d1d5db; margin: 0 auto 1rem;" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0zm6 3a2 2 0 11-4 0 2 2 0 014 0zM7 10a2 2 0 11-4 0 2 2 0 014 0z" />
-              </svg>
-              <p style="font-size: 0.875rem; color: #6b7280; margin: 0;">No participants yet</p>
-            </div>
-          </div>
-        </div>
+        <Responses :responses="responses" />
       </div>
     </div>
   </div>
@@ -420,8 +131,6 @@ const selectionEnd = ref<Date | null>(null)
 const dateInputText = ref('')
 const isDateInputFocused = ref(false)
 
-const weekDays = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat']
-const monthNames = ['January', 'February', 'March', 'April', 'May', 'June', 'July', 'August', 'September', 'October', 'November', 'December']
 
 // Button states
 const copyLinkLoading = ref(false)
@@ -476,8 +185,6 @@ function handleClickOutside(event: MouseEvent) {
   }
 }
 
-// Computed properties for date picker
-const currentMonthName = computed(() => monthNames[currentMonth.value])
 
 // Calculate input width based on content
 const dateInputWidth = computed(() => {
@@ -699,80 +406,6 @@ function dateToKey(date: Date): string {
   return `${date.getFullYear()}-${date.getMonth()}-${date.getDate()}`
 }
 
-function isDateSelected(date: Date | null): boolean {
-  if (!date) return false
-  return selectedDates.value.some(d => dateToKey(d) === dateToKey(date))
-}
-
-function isDateInSelectionRange(date: Date | null): boolean {
-  if (!date || !selectionStart.value || !selectionEnd.value) return false
-  const dateTime = date.getTime()
-  const startTime = selectionStart.value.getTime()
-  const endTime = selectionEnd.value.getTime()
-  const minTime = Math.min(startTime, endTime)
-  const maxTime = Math.max(startTime, endTime)
-  return dateTime >= minTime && dateTime <= maxTime
-}
-
-function getDatePickerCellStyle(date: Date | null) {
-  if (!date) {
-    return { color: 'transparent', cursor: 'default' }
-  }
-  
-  const isSelected = isDateSelected(date)
-  const inRange = isDateInSelectionRange(date)
-  const isToday = dateToKey(date) === dateToKey(new Date())
-  const isCurrentlySelecting = isSelecting.value && inRange
-  
-  // Show different styles for select vs deselect mode during dragging
-  if (isCurrentlySelecting) {
-    if (selectionMode.value === 'deselect') {
-      // Deselect mode: show red background with strikethrough to indicate removal
-      return {
-        backgroundColor: '#fee2e2',
-        color: '#dc2626',
-        fontWeight: '600',
-        border: '2px solid #dc2626',
-        textDecoration: 'line-through',
-        opacity: '0.8'
-      }
-    } else {
-      // Select mode: show green background
-      return {
-        backgroundColor: '#16a34a',
-        color: 'white',
-        fontWeight: '600',
-        opacity: '1'
-      }
-    }
-  }
-  
-  // Already selected dates (not in current drag range)
-  if (isSelected && !inRange) {
-    return {
-      backgroundColor: '#16a34a',
-      color: 'white',
-      fontWeight: '600',
-      opacity: '1'
-    }
-  }
-  
-  if (isToday && !isSelected) {
-    return {
-      backgroundColor: '#f0fdf4',
-      color: '#16a34a',
-      fontWeight: '600',
-      border: '1px solid #16a34a',
-      opacity: '1'
-    }
-  }
-  
-  return {
-    backgroundColor: 'transparent',
-    color: '#111827',
-    opacity: '1'
-  }
-}
 
 function clearSelection() {
   selectedDates.value = []
@@ -873,26 +506,6 @@ function handleDateInputBlur() {
   updateDateInputText()
 }
 
-function handleMonthButtonHover(event: MouseEvent, isEntering: boolean) {
-  const target = event.currentTarget as HTMLElement
-  target.style.color = isEntering ? '#111827' : '#6b7280'
-}
-
-function handleButtonHover(event: MouseEvent, isEntering: boolean, defaultColor: string) {
-  const target = event.currentTarget as HTMLElement
-  if (isEntering) {
-    target.style.borderColor = '#16a34a'
-    target.style.color = '#16a34a'
-  } else {
-    target.style.borderColor = defaultColor
-    target.style.color = '#374151'
-  }
-}
-
-function handleDoneButtonHover(event: MouseEvent, isEntering: boolean) {
-  const target = event.currentTarget as HTMLElement
-  target.style.transform = isEntering ? 'translateY(-1px)' : 'translateY(0)'
-}
 
 // Update calendar when settings change
 function updateCalendar() {
@@ -962,24 +575,11 @@ function handleCopyLinkHover(event: MouseEvent, isEntering: boolean) {
   }
 }
 
-// Handle calendar cell hover
-function handleCellHover(event: MouseEvent, isEntering: boolean) {
-  const target = event.currentTarget as HTMLElement
-  if (isEntering) {
-    target.style.backgroundColor = '#f0fdf4'
-  } else {
-    target.style.backgroundColor = 'white'
-  }
-}
-
-// Handle response item hover
-function handleResponseHover(event: MouseEvent, isEntering: boolean) {
-  const target = event.currentTarget as HTMLElement
-  if (isEntering) {
-    target.style.backgroundColor = '#f9fafb'
-  } else {
-    target.style.backgroundColor = 'white'
-  }
+// Handle sign out
+function handleSignOut() {
+  // You can add sign out logic here
+  console.log('Sign out clicked')
+  // For now, this could navigate to login page or clear session
 }
 
 // Add availability
