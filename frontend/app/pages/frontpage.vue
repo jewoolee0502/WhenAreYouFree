@@ -134,7 +134,6 @@ import { ref, computed, onMounted } from 'vue'
 
 // Meta tags for SEO
 useHead({
-  title: 'WhenAreYouFree - Find a time to meet',
   meta: [
     {
       name: 'description',

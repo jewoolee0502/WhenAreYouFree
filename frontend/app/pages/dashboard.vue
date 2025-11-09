@@ -138,7 +138,6 @@ import { ref, computed, onMounted, onUnmounted, watch } from 'vue'
 
 // Meta tags
 useHead({
-  title: 'Dashboard - WhenAreYouFree',
   meta: [
     {
       name: 'description',
