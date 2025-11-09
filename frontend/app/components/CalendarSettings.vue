@@ -175,6 +175,22 @@
           />
         </div>
       </div>
+
+      <!-- Increment Selection -->
+      <div>
+        <label style="display: block; font-size: 0.875rem; font-weight: 600; color: #374151; margin-bottom: 0.5rem;">Increment</label>
+        <select 
+          :value="timeIncrement"
+          @change="$emit('update:timeIncrement', Number(($event.target as HTMLSelectElement).value)); $emit('updateCalendar')"
+          style="width: 8rem; padding: 0.625rem 0.5rem; border: 1px solid #d1d5db; border-radius: 0.5rem; font-size: 0.875rem; color: #111827; background: white; cursor: pointer; transition: border-color 0.2s;"
+          onfocus="this.style.borderColor='#16a34a'; this.style.outline='none'"
+          onblur="this.style.borderColor='#d1d5db'"
+        >
+          <option :value="15">15 min</option>
+          <option :value="30">30 min</option>
+          <option :value="60">1 hour</option>
+        </select>
+      </div>
     </div>
   </div>
 </template>
@@ -185,6 +201,7 @@ import { computed } from 'vue'
 interface Props {
   timezone: string
   timeFormat: string
+  timeIncrement: 15 | 30 | 60
   dateInputText: string
   showDatePicker: boolean
   currentMonth: number
@@ -204,6 +221,7 @@ const props = defineProps<Props>()
 defineEmits<{
   'update:timezone': [value: string]
   'update:timeFormat': [value: string]
+  'update:timeIncrement': [value: 15 | 30 | 60]
   'update:dateInputText': [value: string]
   'update:showDatePicker': [value: boolean]
   'update:startTime': [value: string]

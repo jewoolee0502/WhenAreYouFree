@@ -15,6 +15,7 @@
           v-model:showDatePicker="showDatePicker"
           v-model:startTime="startTime"
           v-model:endTime="endTime"
+          v-model:timeIncrement="timeIncrement"
           :current-month="currentMonth"
           :current-year="currentYear"
           :selected-dates="selectedDates"
@@ -119,6 +120,7 @@ const startTime = ref('09:00')
 const endTime = ref('16:00')
 const timezone = ref('America/Los_Angeles')
 const timeFormat = ref('12h')
+const timeIncrement = ref<15 | 30 | 60>(30)
 
 // Date picker state
 const showDatePicker = ref(false)
@@ -297,9 +299,9 @@ const timeSlots = computed(() => {
     const timeStr = formatTime(currentHour, currentMinute)
     slots.push(timeStr)
     
-    currentMinute += 60
+    currentMinute += timeIncrement.value
     if (currentMinute >= 60) {
-      currentMinute = 0
+      currentMinute = currentMinute % 60
       currentHour++
     }
   }
