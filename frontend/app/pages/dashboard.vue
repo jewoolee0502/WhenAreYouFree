@@ -1,7 +1,7 @@
 <template>
   <div style="height: 100vh; overflow: hidden; background: #ffffff; font-family: system-ui, -apple-system, sans-serif; display: flex; flex-direction: column;">
     <!-- Navigation -->
-    <Navbar variant="dashboard" @sign-out="handleSignOut" />
+    <Navbar variant="dashboard" :is-authenticated="isAuthenticated" @sign-out="handleSignOut" @sign-in="handleSignIn" />
 
     <!-- Dashboard Content -->
     <div style="flex: 1; overflow: hidden; padding: 2rem; max-width: 1400px; margin: 0 auto; width: 100%; display: flex; flex-direction: column;">
@@ -127,6 +127,9 @@
 
     <!-- Add Availability Modal -->
     <AddAvailability v-model="showAddAvailabilityModal" @manual="handleManualSelection" />
+
+    <!-- Login/Signup Modal -->
+    <LoginSignupModal v-model="showModal" />
   </div>
 </template>
 
@@ -143,6 +146,10 @@ useHead({
     }
   ]
 })
+
+// Authentication state (defaults to false for guests)
+const isAuthenticated = ref(false)
+const showModal = ref(false)
 
 // Calendar settings
 const selectedDates = ref<Date[]>([])
@@ -651,10 +658,16 @@ function handleCopyLinkHover(event: MouseEvent, isEntering: boolean) {
   }
 }
 
+// Handle sign in
+function handleSignIn() {
+  showModal.value = true
+}
+
 // Handle sign out
 function handleSignOut() {
   // You can add sign out logic here
   console.log('Sign out clicked')
+  isAuthenticated.value = false
   // For now, this could navigate to login page or clear session
 }
 
