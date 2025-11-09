@@ -108,6 +108,7 @@ const props = defineProps<{
 
 const emit = defineEmits<{
   'update:modelValue': [value: boolean]
+  'manual': []
 }>()
 
 // Prevent body scroll when modal is open
@@ -150,8 +151,7 @@ function handleOutlookCalendar() {
 
 // Manual input handler
 function handleManual() {
-  // TODO: Implement manual input flow
-  console.log('Manual input clicked')
+  emit('manual')
   closeModal()
 }
 </script>

@@ -1,12 +1,12 @@
 <template>
-  <div style="min-height: 100vh; background: #ffffff; font-family: system-ui, -apple-system, sans-serif;">
+  <div style="height: 100vh; overflow: hidden; background: #ffffff; font-family: system-ui, -apple-system, sans-serif; display: flex; flex-direction: column;">
     <!-- Navigation -->
     <Navbar variant="dashboard" @sign-out="handleSignOut" />
 
     <!-- Dashboard Content -->
-    <div style="padding: 2rem; max-width: 1400px; margin: 0 auto;">
+    <div style="flex: 1; overflow: hidden; padding: 2rem; max-width: 1400px; margin: 0 auto; width: 100%; display: flex; flex-direction: column;">
       <!-- Settings and Buttons Section -->
-      <div class="settings-buttons-grid" style="display: grid; grid-template-columns: 1fr 320px; gap: 1.5rem; margin-bottom: 1.5rem; align-items: start;">
+      <div class="settings-buttons-grid" style="display: grid; grid-template-columns: 1fr 320px; gap: 1.5rem; margin-bottom: 1.5rem; align-items: start; flex-shrink: 0;">
         <!-- Calendar Settings -->
         <CalendarSettings
           v-model:timezone="timezone"
@@ -85,13 +85,20 @@
       </div>
 
       <!-- Calendar and Responses Section -->
-      <div class="calendar-responses-grid" style="display: grid; grid-template-columns: 1fr 320px; gap: 1.5rem; align-items: start;">
+      <div class="calendar-responses-grid" style="display: grid; grid-template-columns: 1fr 320px; gap: 1.5rem; align-items: stretch; flex: 1; min-height: 0;">
         <!-- Calendar Section -->
-        <Calendar
+        <div style="display: flex; flex-direction: column; min-height: 0;">
+          <Calendar
           :calendar-dates="calendarDates"
           :time-slots="timeSlots"
+          :hourly-labels="hourlyLabels"
+          :time-increment="timeIncrement"
+          :manual-selection-mode="isManualSelectionMode"
+          :selected-slots="selectedAvailabilitySlots"
           @cell-click="handleCellClick"
-        />
+          @cell-select="handleCellSelect"
+          />
+        </div>
 
         <!-- Responses Section -->
         <Responses :responses="responses" />
@@ -99,7 +106,7 @@
     </div>
 
     <!-- Add Availability Modal -->
-    <AddAvailability v-model="showAddAvailabilityModal" />
+    <AddAvailability v-model="showAddAvailabilityModal" @manual="handleManualSelection" />
   </div>
 </template>
 
@@ -141,6 +148,10 @@ const isDateInputFocused = ref(false)
 const copyLinkLoading = ref(false)
 const copyLinkSuccess = ref(false)
 const showAddAvailabilityModal = ref(false)
+
+// Manual selection mode
+const isManualSelectionMode = ref(false)
+const selectedAvailabilitySlots = ref<Set<string>>(new Set())
 
 // Responses data
 interface Response {
@@ -286,31 +297,26 @@ const calendarDates = computed(() => {
   })
 })
 
-// Generate time slots
+// Generate time slots - hourly intervals (one slot per hour)
 const timeSlots = computed(() => {
   const slots = []
   const startParts = startTime.value.split(':').map(Number)
   const endParts = endTime.value.split(':').map(Number)
   const startHour = startParts[0] ?? 9
-  const startMinute = startParts[1] ?? 0
   const endHour = endParts[0] ?? 16
-  const endMinute = endParts[1] ?? 0
   
-  let currentHour = startHour
-  let currentMinute = startMinute
-  
-  while (currentHour < endHour || (currentHour === endHour && currentMinute <= endMinute)) {
-    const timeStr = formatTime(currentHour, currentMinute)
+  // Generate one slot per hour from start to end (inclusive)
+  for (let hour = startHour; hour <= endHour; hour++) {
+    const timeStr = formatTime(hour, 0)
     slots.push(timeStr)
-    
-    currentMinute += timeIncrement.value
-    if (currentMinute >= 60) {
-      currentMinute = currentMinute % 60
-      currentHour++
-    }
   }
   
   return slots
+})
+
+// Generate hourly labels for the time column (same as time slots now)
+const hourlyLabels = computed(() => {
+  return timeSlots.value
 })
 
 // Format time based on 12h/24h format
@@ -520,8 +526,37 @@ function updateCalendar() {
 
 // Handle cell click
 function handleCellClick(date: { date: Date; dateStr: string; dayName: string }, timeSlot: string) {
-  console.log('Cell clicked:', date.dateStr, timeSlot)
-  // You can add event creation logic here
+  if (isManualSelectionMode.value) {
+    // Toggle selection in manual mode
+    const slotKey = `${date.date.getTime()}-${timeSlot}`
+    if (selectedAvailabilitySlots.value.has(slotKey)) {
+      selectedAvailabilitySlots.value.delete(slotKey)
+    } else {
+      selectedAvailabilitySlots.value.add(slotKey)
+    }
+  } else {
+    console.log('Cell clicked:', date.dateStr, timeSlot)
+    // You can add event creation logic here
+  }
+}
+
+// Handle cell select (for drag selection)
+function handleCellSelect(date: { date: Date; dateStr: string; dayName: string }, timeSlot: string, isSelected: boolean) {
+  if (!isManualSelectionMode.value) return
+  
+  const slotKey = `${date.date.getTime()}-${timeSlot}`
+  if (isSelected) {
+    selectedAvailabilitySlots.value.add(slotKey)
+  } else {
+    selectedAvailabilitySlots.value.delete(slotKey)
+  }
+}
+
+// Handle manual selection mode
+function handleManualSelection() {
+  isManualSelectionMode.value = true
+  // Optionally clear previous selections
+  // selectedAvailabilitySlots.value.clear()
 }
 
 // Copy link to clipboard
