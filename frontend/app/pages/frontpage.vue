@@ -24,6 +24,7 @@
         <div style="display: flex; gap: 1rem; justify-content: center; align-items: center; flex-wrap: wrap; margin-bottom: 1.5rem;">
           <button 
             class="hero-button"
+            @click="showCreateEventModal = true"
             style="padding: 1rem 2.5rem; font-size: 1.125rem; font-weight: 600; background: linear-gradient(135deg, #16a34a, #059669); color: white; border: none; border-radius: 0.75rem; cursor: pointer; box-shadow: 0 10px 15px -3px rgba(22, 163, 74, 0.3), 0 4px 6px -2px rgba(22, 163, 74, 0.2); transition: all 0.3s; position: relative; overflow: hidden;"
             onmouseover="this.style.transform='translateY(-2px)'; this.style.boxShadow='0 20px 25px -5px rgba(22, 163, 74, 0.4), 0 10px 10px -5px rgba(22, 163, 74, 0.3)'"
             onmouseout="this.style.transform='translateY(0)'; this.style.boxShadow='0 10px 15px -3px rgba(22, 163, 74, 0.3), 0 4px 6px -2px rgba(22, 163, 74, 0.2)'"
@@ -116,6 +117,13 @@
       </div>
     </section>
 
+    <!-- Create Event Modal -->
+    <CreateEventModal 
+      v-model="showCreateEventModal" 
+      @sign-in="handleCreateEventSignIn"
+      @continue-as-guest="handleContinueAsGuest"
+    />
+
     <!-- Login/Signup Modal -->
     <LoginSignupModal v-model="showModal" />
   </div>
@@ -144,6 +152,7 @@ useHead({
 
 // Modal state
 const showModal = ref(false)
+const showCreateEventModal = ref(false)
 
 // Calendar data
 const currentMonth = ref('September')
@@ -265,6 +274,15 @@ function getDateStyle(date: number | string, theme: 'light' | 'dark'): string {
       return baseStyle + 'color: #ffffff;'
     }
   }
+}
+
+// Handle create event modal actions
+function handleCreateEventSignIn() {
+  showModal.value = true
+}
+
+function handleContinueAsGuest() {
+  navigateTo('/dashboard')
 }
 </script>
 
