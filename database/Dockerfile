@@ -1,1 +1,1 @@
-FROM postgres:latest
+FROM mongo:latest

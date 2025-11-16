@@ -38,7 +38,7 @@
 
         <!-- Action Buttons -->
         <div style="display: flex; flex-direction: column; gap: 1rem;">
-          <button 
+          <button
             @click="copyLink"
             :disabled="copyLinkLoading"
             :style="{
@@ -69,8 +69,8 @@
             </svg>
             <span>{{ copyLinkSuccess ? 'Link copied!' : 'Copy link' }}</span>
           </button>
-          
-          <button 
+
+          <button
             @click="addAvailability"
             style="display: flex; align-items: center; justify-content: center; gap: 0.5rem; padding: 0.75rem 1.5rem; font-size: 0.875rem; font-weight: 600; background: linear-gradient(135deg, #16a34a, #059669); color: white; border: none; border-radius: 0.5rem; cursor: pointer; transition: all 0.2s; box-shadow: 0 1px 3px 0 rgba(22, 163, 74, 0.3); width: 100%;"
             onmouseover="this.style.transform='translateY(-1px)'; this.style.boxShadow='0 4px 6px -1px rgba(22, 163, 74, 0.4)'"
@@ -84,7 +84,7 @@
 
           <!-- Cancel and Save Buttons (shown when in manual selection mode) -->
           <div v-if="isManualSelectionMode" style="display: flex; gap: 0.75rem;">
-            <button 
+            <button
               @click="handleCancelManualSelection"
               style="flex: 1; padding: 0.75rem 1.5rem; font-size: 0.875rem; font-weight: 600; background: white; border: 1px solid #dc2626; border-radius: 0.5rem; color: #dc2626; cursor: pointer; transition: all 0.2s;"
               onmouseover="this.style.backgroundColor='#fef2f2'; this.style.transform='translateY(-1px)'"
@@ -92,13 +92,25 @@
             >
               Cancel
             </button>
-            <button 
+            <button
               @click="handleSaveManualSelection"
-              style="flex: 1; padding: 0.75rem 1.5rem; font-size: 0.875rem; font-weight: 600; background: white; border: 1px solid #16a34a; border-radius: 0.5rem; color: #16a34a; cursor: pointer; transition: all 0.2s;"
-              onmouseover="this.style.backgroundColor='#f0fdf4'; this.style.transform='translateY(-1px)'"
-              onmouseout="this.style.backgroundColor='white'; this.style.transform='translateY(0)'"
+              :disabled="savingAvailability"
+              :style="{
+                flex: 1,
+                padding: '0.75rem 1.5rem',
+                fontSize: '0.875rem',
+                fontWeight: '600',
+                background: savingAvailability ? '#9ca3af' : 'white',
+                border: savingAvailability ? '1px solid #9ca3af' : '1px solid #16a34a',
+                borderRadius: '0.5rem',
+                color: savingAvailability ? '#ffffff' : '#16a34a',
+                cursor: savingAvailability ? 'not-allowed' : 'pointer',
+                transition: 'all 0.2s'
+              }"
+              onmouseover="if(!this.disabled){this.style.backgroundColor='#f0fdf4'; this.style.transform='translateY(-1px)'}"
+              onmouseout="if(!this.disabled){this.style.backgroundColor='white'; this.style.transform='translateY(0)'}"
             >
-              Save
+              {{ savingAvailability ? 'Saving...' : 'Save' }}
             </button>
           </div>
         </div>
@@ -121,7 +133,7 @@
         </div>
 
         <!-- Responses Section -->
-        <Responses :responses="responses" />
+        <Responses :responses="responses" @edit="handleEditParticipant" />
       </div>
     </div>
 
@@ -134,7 +146,16 @@
 </template>
 
 <script setup lang="ts">
-import { ref, computed, onMounted, onUnmounted, watch } from 'vue'
+import { ref, computed, onMounted, onUnmounted, onBeforeUnmount, watch } from 'vue'
+import { useRoute } from 'vue-router'
+
+const route = useRoute()
+const sessionId = computed(() => route.params.id as string)
+
+// Get API composable
+const { updateAvailability } = useSessionApi()
+const pollingSessionId = ref(sessionId.value)
+const { session, error: pollingError, startPolling, stopPolling } = useSessionPolling(pollingSessionId, 5000)
 
 // Meta tags
 useHead({
@@ -174,29 +195,75 @@ const isDateInputFocused = ref(false)
 const copyLinkLoading = ref(false)
 const copyLinkSuccess = ref(false)
 const showAddAvailabilityModal = ref(false)
+const savingAvailability = ref(false)
 
 // Manual selection mode
 const isManualSelectionMode = ref(false)
-const selectedAvailabilitySlots = ref<Set<string>>(new Set())
+const individualSlots = ref<Set<string>>(new Set())
+const participantName = ref('')
 
-// Responses data
+// View mode: 'group' = show combined availability, 'individual' = show one person's availability
+const viewMode = ref<'group' | 'individual'>('group')
+const editingParticipantName = ref<string | null>(null)
+
+// Computed slots - shows either group or individual availability
+const selectedAvailabilitySlots = computed(() => {
+  if (viewMode.value === 'individual' || isManualSelectionMode.value) {
+    return individualSlots.value
+  }
+
+  // Group mode: combine all participants' availability
+  const combinedSlots = new Set<string>()
+
+  if (session.value?.availabilities) {
+    for (const availability of session.value.availabilities) {
+      for (const block of availability.timeBlocks) {
+        const date = new Date(block.date)
+        const timeSlot = formatTime(block.hour, block.halfHour ? 30 : 0)
+        const slotKey = `${date.getTime()}-${timeSlot}`
+        combinedSlots.add(slotKey)
+      }
+    }
+  }
+
+  return combinedSlots
+})
+
+// Responses data - will be populated from backend
 interface Response {
   name: string
   responded: boolean
   responseTime?: string
 }
 
-const responses = ref<Response[]>([
-  { name: 'John Doe', responded: true, responseTime: '2 hours ago' },
-  { name: 'Jane Smith', responded: true, responseTime: '1 day ago' },
-  { name: 'Bob Johnson', responded: false },
-  { name: 'Alice Williams', responded: true, responseTime: '3 hours ago' },
-  { name: 'Charlie Brown', responded: false },
-  { name: 'Diana Prince', responded: true, responseTime: '5 minutes ago' }
-])
+const responses = computed<Response[]>(() => {
+  if (!session.value?.availabilities) return []
+
+  return session.value.availabilities.map(availability => ({
+    name: availability.participantName,
+    responded: availability.responded,
+    responseTime: formatTimeAgo(new Date(availability.lastUpdated))
+  }))
+})
+
+function formatTimeAgo(date: Date): string {
+  const now = new Date()
+  const diffMs = now.getTime() - date.getTime()
+  const diffMins = Math.floor(diffMs / 60000)
+  const diffHours = Math.floor(diffMins / 60)
+  const diffDays = Math.floor(diffHours / 24)
+
+  if (diffMins < 1) return 'just now'
+  if (diffMins < 60) return `${diffMins} minute${diffMins > 1 ? 's' : ''} ago`
+  if (diffHours < 24) return `${diffHours} hour${diffHours > 1 ? 's' : ''} ago`
+  return `${diffDays} day${diffDays > 1 ? 's' : ''} ago`
+}
 
 // Initialize with default dates (today + next 4 days)
 onMounted(() => {
+  // Start polling for session updates
+  startPolling()
+
   if (selectedDates.value.length === 0) {
     const today = new Date()
     today.setHours(0, 0, 0, 0)
@@ -208,7 +275,7 @@ onMounted(() => {
   }
   updateDateInputText()
   updateCalendar()
-  
+
   // Close date picker when clicking outside
   document.addEventListener('click', handleClickOutside)
 })
@@ -217,12 +284,16 @@ onUnmounted(() => {
   document.removeEventListener('click', handleClickOutside)
 })
 
+onBeforeUnmount(() => {
+  stopPolling()
+})
+
 function handleClickOutside(event: MouseEvent) {
   const target = event.target as HTMLElement
   const datePicker = document.querySelector('.date-picker-calendar')
   const datePickerButton = target.closest('[data-date-picker-button]')
   const dateInput = target.closest('input[type="text"]')
-  
+
   if (datePicker && !datePicker.contains(target) && !datePickerButton && !dateInput) {
     showDatePicker.value = false
   }
@@ -234,11 +305,11 @@ const dateInputWidth = computed(() => {
   // Use the actual placeholder text when input is empty to ensure it's never cut off
   const placeholderText = 'YYYY/MM/DD - YYYY/MM/DD'
   const text = dateInputText.value || placeholderText
-  
+
   const charWidth = 11 // pixels per character (slightly wider)
   const extraPadding = 10 // extra space for better readability
   const calculatedWidth = (text.length * charWidth) + extraPadding
-  
+
   // Ensure minimum width is at least enough for the placeholder plus extra space
   const minWidth = (placeholderText.length * charWidth) + extraPadding
   return `${Math.max(calculatedWidth, minWidth)}px`
@@ -256,7 +327,7 @@ function updateDateInputText() {
     dateInputText.value = ''
     return
   }
-  
+
   const sorted = [...selectedDates.value].sort((a, b) => a.getTime() - b.getTime())
   if (sorted.length === 1) {
     const date = sorted[0]
@@ -286,35 +357,35 @@ const calendarDays = computed(() => {
   const firstDay = new Date(currentYear.value, currentMonth.value, 1)
   const lastDay = new Date(currentYear.value, currentMonth.value + 1, 0)
   const startDayOfWeek = firstDay.getDay()
-  
+
   // Add empty cells for days before the first day of the month
   for (let i = 0; i < startDayOfWeek; i++) {
     days.push(null)
   }
-  
+
   // Add all days of the month
   for (let day = 1; day <= lastDay.getDate(); day++) {
     days.push(new Date(currentYear.value, currentMonth.value, day))
   }
-  
+
   return days
 })
 
 // Generate calendar dates from selected dates
 const calendarDates = computed(() => {
   if (selectedDates.value.length === 0) return []
-  
+
   const shortMonthNames = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec']
   const dayNames = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat']
-  
+
   // Sort dates chronologically
   const sortedDates = [...selectedDates.value].sort((a, b) => a.getTime() - b.getTime())
-  
+
   return sortedDates.map(date => {
     const month = shortMonthNames[date.getMonth()]
     const day = date.getDate()
     const dayName = dayNames[date.getDay()] ?? 'Sun'
-    
+
     return {
       date: date,
       dateStr: `${month} ${day}`,
@@ -330,13 +401,13 @@ const timeSlots = computed(() => {
   const endParts = endTime.value.split(':').map(Number)
   const startHour = startParts[0] ?? 9
   const endHour = endParts[0] ?? 16
-  
+
   // Generate one slot per hour from start to end (inclusive)
   for (let hour = startHour; hour <= endHour; hour++) {
     const timeStr = formatTime(hour, 0)
     slots.push(timeStr)
   }
-  
+
   return slots
 })
 
@@ -381,12 +452,12 @@ function startDateSelection(date: Date | null) {
   isSelecting.value = true
   selectionStart.value = new Date(date)
   selectionEnd.value = new Date(date)
-  
+
   // Determine selection mode based on whether the initial date is selected
   const dateStr = dateToKey(date)
   const isSelected = selectedDates.value.some(d => dateToKey(d) === dateStr)
   selectionMode.value = isSelected ? 'deselect' : 'select'
-  
+
   // Toggle the initial date
   if (isSelected) {
     selectedDates.value = selectedDates.value.filter(d => dateToKey(d) !== dateStr)
@@ -405,31 +476,31 @@ function continueDateSelection(date: Date | null) {
 
 function updateSelectionRange() {
   if (!selectionStart.value || !selectionEnd.value) return
-  
+
   let start = new Date(selectionStart.value)
   let end = new Date(selectionEnd.value)
-  
+
   // Ensure start is before end
   if (start.getTime() > end.getTime()) {
     const temp = start
     start = end
     end = temp
   }
-  
+
   // Generate all dates in range
   const current = new Date(start)
   current.setHours(0, 0, 0, 0)
-  
+
   while (current.getTime() <= end.getTime()) {
     const dateKey = dateToKey(current)
     const isSelected = selectedDates.value.some(d => dateToKey(d) === dateKey)
-    
+
     if (selectionMode.value === 'select' && !isSelected) {
       selectedDates.value.push(new Date(current))
     } else if (selectionMode.value === 'deselect' && isSelected) {
       selectedDates.value = selectedDates.value.filter(d => dateToKey(d) !== dateKey)
     }
-    
+
     current.setDate(current.getDate() + 1)
   }
 }
@@ -456,13 +527,13 @@ function handleDateInput() {
     selectedDates.value = []
     return
   }
-  
+
   // Check if input is a range format: YYYY/MM/DD - YYYY/MM/DD
   const rangeMatch = input.match(/^(\d{4}\/\d{2}\/\d{2})\s*-\s*(\d{4}\/\d{2}\/\d{2})$/)
   if (rangeMatch && rangeMatch[1] && rangeMatch[2]) {
     const startDate = parseDateInput(rangeMatch[1])
     const endDate = parseDateInput(rangeMatch[2])
-    
+
     if (startDate && endDate) {
       // Generate all dates in the range
       const dates: Date[] = []
@@ -470,28 +541,28 @@ function handleDateInput() {
       current.setHours(0, 0, 0, 0)
       let end = new Date(endDate)
       end.setHours(0, 0, 0, 0)
-      
+
       // Ensure start is before end
       if (current.getTime() > end.getTime()) {
         const temp = current
         current = end
         end = temp
       }
-      
+
       while (current.getTime() <= end.getTime()) {
         dates.push(new Date(current))
         current.setDate(current.getDate() + 1)
       }
-      
+
       selectedDates.value = dates
       return
     }
   }
-  
+
   // Parse comma-separated dates or single date
   const dateStrings = input.split(',').map(s => s.trim()).filter(s => s)
   const parsedDates: Date[] = []
-  
+
   for (const dateStr of dateStrings) {
     const date = parseDateInput(dateStr)
     if (date) {
@@ -500,12 +571,12 @@ function handleDateInput() {
       parsedDates.push(date)
     }
   }
-  
+
   // Remove duplicates
   const uniqueDates = parsedDates.filter((date, index, self) =>
     index === self.findIndex(d => dateToKey(d) === dateToKey(date))
   )
-  
+
   selectedDates.value = uniqueDates
 }
 
@@ -513,24 +584,24 @@ function parseDateInput(input: string): Date | null {
   // Match YYYY/MM/DD or YYYY-MM-DD format (accept both for flexibility)
   const dateRegex = /^(\d{4})[\/\-](\d{2})[\/\-](\d{2})$/
   const match = input.match(dateRegex)
-  
+
   if (!match || !match[1] || !match[2] || !match[3]) return null
-  
+
   const year = parseInt(match[1], 10)
   const month = parseInt(match[2], 10) - 1 // Month is 0-indexed
   const day = parseInt(match[3], 10)
-  
+
   // Validate date
   if (month < 0 || month > 11) return null
   if (day < 1 || day > 31) return null
-  
+
   const date = new Date(year, month, day)
-  
+
   // Check if date is valid (handles invalid dates like Feb 30)
   if (date.getFullYear() !== year || date.getMonth() !== month || date.getDate() !== day) {
     return null
   }
-  
+
   return date
 }
 
@@ -555,10 +626,10 @@ function handleCellClick(date: { date: Date; dateStr: string; dayName: string },
   if (isManualSelectionMode.value) {
     // Toggle selection in manual mode
     const slotKey = `${date.date.getTime()}-${timeSlot}`
-    if (selectedAvailabilitySlots.value.has(slotKey)) {
-      selectedAvailabilitySlots.value.delete(slotKey)
+    if (individualSlots.value.has(slotKey)) {
+      individualSlots.value.delete(slotKey)
     } else {
-      selectedAvailabilitySlots.value.add(slotKey)
+      individualSlots.value.add(slotKey)
     }
   } else {
     console.log('Cell clicked:', date.dateStr, timeSlot)
@@ -569,53 +640,142 @@ function handleCellClick(date: { date: Date; dateStr: string; dayName: string },
 // Handle cell select (for drag selection)
 function handleCellSelect(date: { date: Date; dateStr: string; dayName: string }, timeSlot: string, isSelected: boolean) {
   if (!isManualSelectionMode.value) return
-  
+
   const slotKey = `${date.date.getTime()}-${timeSlot}`
   if (isSelected) {
-    selectedAvailabilitySlots.value.add(slotKey)
+    individualSlots.value.add(slotKey)
   } else {
-    selectedAvailabilitySlots.value.delete(slotKey)
+    individualSlots.value.delete(slotKey)
   }
 }
 
-// Handle manual selection mode
-function handleManualSelection() {
+// Handle edit participant - switch to individual view
+function handleEditParticipant(name: string) {
+  viewMode.value = 'individual'
+  editingParticipantName.value = name
+  participantName.value = name
   isManualSelectionMode.value = true
-  // Optionally clear previous selections
-  // selectedAvailabilitySlots.value.clear()
+
+  // Load this participant's availability
+  individualSlots.value.clear()
+
+  const participant = session.value?.availabilities.find(a => a.participantName === name)
+  if (participant) {
+    for (const block of participant.timeBlocks) {
+      const date = new Date(block.date)
+      const timeSlot = formatTime(block.hour, block.halfHour ? 30 : 0)
+      const slotKey = `${date.getTime()}-${timeSlot}`
+      individualSlots.value.add(slotKey)
+    }
+  }
 }
 
-// Handle cancel manual selection
+// Handle manual selection mode - new participant
+function handleManualSelection() {
+  viewMode.value = 'individual'
+  isManualSelectionMode.value = true
+  editingParticipantName.value = null
+
+  // Prompt for participant name
+  const name = prompt('Please enter your name:')
+  if (name && name.trim()) {
+    participantName.value = name.trim()
+  } else {
+    participantName.value = 'Guest'
+  }
+
+  // Clear individual slots for new participant
+  individualSlots.value.clear()
+}
+
+// Handle cancel manual selection - return to group view
 function handleCancelManualSelection() {
   isManualSelectionMode.value = false
-  // Optionally clear selections when canceling
-  selectedAvailabilitySlots.value.clear()
+  viewMode.value = 'group'
+  editingParticipantName.value = null
+  individualSlots.value.clear()
+  participantName.value = ''
 }
 
-// Handle save manual selection
-function handleSaveManualSelection() {
-  // TODO: Implement save logic to persist the selected availability slots
-  console.log('Saving availability slots:', selectedAvailabilitySlots.value)
-  isManualSelectionMode.value = false
-  // You can add API call here to save the availability
+// Handle save manual selection - BACKEND INTEGRATION
+async function handleSaveManualSelection() {
+  if (individualSlots.value.size === 0) {
+    alert('Please select at least one time slot')
+    return
+  }
+
+  if (!participantName.value) {
+    const name = prompt('Please enter your name:')
+    if (name && name.trim()) {
+      participantName.value = name.trim()
+    } else {
+      return
+    }
+  }
+
+  savingAvailability.value = true
+
+  // Convert selected slots to timeBlocks format
+  const timeBlocks = Array.from(individualSlots.value).map(slotKey => {
+    const [dateTime, timeSlot] = slotKey.split('-')
+    const date = new Date(parseInt(dateTime || '0'))
+
+    // Parse hour from timeSlot
+    const hourMatch = timeSlot?.match(/(\d+)/)
+    let hour = parseInt(hourMatch?.[1] || '0')
+
+    // Handle PM times
+    if (timeSlot?.includes('PM') && hour < 12) {
+      hour += 12
+    } else if (timeSlot?.includes('AM') && hour === 12) {
+      hour = 0
+    }
+
+    const dateStr = date.toISOString().split('T')[0]
+    return {
+      date: dateStr || '',
+      hour: hour,
+      halfHour: false
+    }
+  })
+
+  // Call backend API
+  const { data, error } = await updateAvailability(sessionId.value, {
+    participantName: participantName.value,
+    timeBlocks: timeBlocks
+  })
+
+  savingAvailability.value = false
+
+  if (data) {
+    // Success - exit manual mode and return to group view
+    isManualSelectionMode.value = false
+    viewMode.value = 'group'
+    editingParticipantName.value = null
+    individualSlots.value.clear()
+    participantName.value = ''
+
+  } else {
+    alert(`Failed to save availability: ${error}`)
+  }
 }
 
 // Copy link to clipboard
 async function copyLink() {
   if (copyLinkLoading.value) return
-  
+
   copyLinkLoading.value = true
   copyLinkSuccess.value = false
-  
+
   try {
     // Get the current page URL
     const url = window.location.href
-    
+
     // Copy to clipboard
     await navigator.clipboard.writeText(url)
-    
+
     copyLinkSuccess.value = true
-    
+
     // Reset success message after 2 seconds
     setTimeout(() => {
       copyLinkSuccess.value = false
@@ -684,12 +844,12 @@ function addAvailability() {
   .settings-buttons-grid {
     grid-template-columns: 1fr !important;
   }
-  
+
   /* Stack calendar and responses on tablets and smaller */
   .calendar-responses-grid {
     grid-template-columns: 1fr !important;
   }
-  
+
   /* Remove sticky positioning on mobile */
   .responses-section {
     position: relative !important;
@@ -701,13 +861,13 @@ function addAvailability() {
   div[style*="padding: 2rem"] {
     padding: 1rem !important;
   }
-  
+
   div[style*="grid-template-columns: repeat(auto-fit"] {
     grid-template-columns: 1fr !important;
   }
-  
+
   /* Grid columns will be handled by inline styles */
-  
+
   div[style*="max-height: 600px"] {
     max-height: 400px !important;
   }

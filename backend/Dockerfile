@@ -2,9 +2,17 @@ FROM oven/bun:latest
 
 WORKDIR /app
 
-COPY package.json bun.lock /app/
+# Copy backend files
+COPY backend/package.json backend/bun.lock ./backend/
+WORKDIR /app/backend
 RUN bun install
 
-COPY . .
-EXPOSE 3000
-CMD ["bun", "run", "dev"]
+# Copy all backend and database files
+WORKDIR /app
+COPY backend ./backend/
+COPY database ./database/
+
+WORKDIR /app/backend
+
+EXPOSE 8000
+CMD ["bun", "run", "index.ts"]

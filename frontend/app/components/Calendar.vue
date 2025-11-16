@@ -278,7 +278,7 @@ function getCellKey(date: { date: Date; dateStr: string; dayName: string }, time
 }
 
 function isCellSelected(date: { date: Date; dateStr: string; dayName: string }, timeSlot: string): boolean {
-  if (!props.manualSelectionMode) return false
+  // Show selected slots in both manual mode AND view mode (for displaying group availability)
   const key = getCellKey(date, timeSlot)
   return props.selectedSlots?.has(key) ?? false
 }

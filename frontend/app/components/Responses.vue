@@ -37,7 +37,7 @@
         <div style="flex: 1; min-width: 0;">
           <div style="font-size: 0.875rem; font-weight: 600; color: #111827; margin-bottom: 0.25rem;">{{ response.name }}</div>
           <div style="display: flex; align-items: center; gap: 0.5rem;">
-            <span 
+            <span
               :style="{
                 fontSize: '0.75rem',
                 color: response.responded ? '#16a34a' : '#6b7280',
@@ -51,23 +51,34 @@
             </span>
           </div>
         </div>
-        
+
+        <!-- Edit Button -->
+        <button
+          v-if="response.responded"
+          @click="$emit('edit', response.name)"
+          style="flex-shrink: 0; padding: 0.375rem 0.75rem; font-size: 0.75rem; font-weight: 600; background: white; border: 1px solid #d1d5db; border-radius: 0.375rem; color: #374151; cursor: pointer; transition: all 0.2s;"
+          @mouseenter="handleEditHover($event, true)"
+          @mouseleave="handleEditHover($event, false)"
+        >
+          Edit
+        </button>
+
         <!-- Status Icon -->
         <div style="flex-shrink: 0;">
-          <svg 
-            v-if="response.responded" 
-            style="width: 1.25rem; height: 1.25rem; color: #16a34a;" 
-            fill="none" 
-            stroke="currentColor" 
+          <svg
+            v-if="response.responded"
+            style="width: 1.25rem; height: 1.25rem; color: #16a34a;"
+            fill="none"
+            stroke="currentColor"
             viewBox="0 0 24 24"
           >
             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7" />
           </svg>
-          <svg 
-            v-else 
-            style="width: 1.25rem; height: 1.25rem; color: #9ca3af;" 
-            fill="none" 
-            stroke="currentColor" 
+          <svg
+            v-else
+            style="width: 1.25rem; height: 1.25rem; color: #9ca3af;"
+            fill="none"
+            stroke="currentColor"
             viewBox="0 0 24 24"
           >
             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
@@ -99,12 +110,27 @@ interface Props {
 
 defineProps<Props>()
 
+defineEmits<{
+  edit: [name: string]
+}>()
+
 function handleResponseHover(event: MouseEvent, isEntering: boolean) {
   const target = event.currentTarget as HTMLElement
   if (isEntering) {
     target.style.backgroundColor = '#f9fafb'
   } else {
     target.style.backgroundColor = 'white'
+  }
+}
+
+function handleEditHover(event: MouseEvent, isEntering: boolean) {
+  const target = event.currentTarget as HTMLElement
+  if (isEntering) {
+    target.style.borderColor = '#16a34a'
+    target.style.color = '#16a34a'
+  } else {
+    target.style.borderColor = '#d1d5db'
+    target.style.color = '#374151'
   }
 }
 </script>
