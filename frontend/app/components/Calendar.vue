@@ -88,6 +88,7 @@ interface Props {
   selectedSlots?: Set<string>
   slotAvailabilityCount?: Map<string, number>
   participantColors?: string[]
+  totalParticipants?: number
 }
 
 const props = withDefaults(defineProps<Props>(), {
@@ -95,7 +96,8 @@ const props = withDefaults(defineProps<Props>(), {
   manualSelectionMode: false,
   selectedSlots: () => new Set<string>(),
   slotAvailabilityCount: () => new Map<string, number>(),
-  participantColors: () => []
+  participantColors: () => [],
+  totalParticipants: 0
 })
 
 // Debug: watch props to see when they change (optional - can be removed in production)
@@ -308,17 +310,28 @@ function getCellBackgroundColor(date: { date: Date; dateStr: string; dayName: st
 
   // Get availability count for this slot
   const key = getCellKey(date, timeSlot)
-  const count = props.slotAvailabilityCount?.get(key) || 0
+  const numberOfAvailablePeople = props.slotAvailabilityCount?.get(key) || 0
 
-  // If no one is available, return white
-  if (count === 0) {
-    return 'white'
+  // Determine the color index directly from availability count
+  const colorIndex = Math.min(
+    numberOfAvailablePeople,
+    Math.max(0, (props.participantColors?.length || 1) - 1)
+  )
+  const color = props.participantColors?.[colorIndex] || 'white'
+
+  // Debug logging (can be removed in production)
+  if (numberOfAvailablePeople > 0) {
+    console.log(`[Calendar] Cell color calculation:`, {
+      slot: `${date.dateStr} ${timeSlot}`,
+      availablePeople: numberOfAvailablePeople,
+      totalParticipants: props.totalParticipants,
+      totalColors: props.participantColors?.length ?? 0,
+      colorIndex,
+      color
+    })
   }
 
-  // Return the color based on count (0-indexed, so count-1)
-  // Colors are ordered from lightest (1 person) to darkest (max people)
-  const colorIndex = count - 1
-  return props.participantColors?.[colorIndex] || 'white'
+  return color
 }
 
 function isCellHovered(date: { date: Date; dateStr: string; dayName: string }, timeSlot: string): boolean {

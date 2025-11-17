@@ -72,6 +72,7 @@
           </button>
 
           <button
+            v-if="!isManualSelectionMode"
             @click="addAvailability"
             style="display: flex; align-items: center; justify-content: center; gap: 0.5rem; padding: 0.75rem 1.5rem; font-size: 0.875rem; font-weight: 600; background: linear-gradient(135deg, #16a34a, #059669); color: white; border: none; border-radius: 0.5rem; cursor: pointer; transition: all 0.2s; box-shadow: 0 1px 3px 0 rgba(22, 163, 74, 0.3); width: 100%;"
             onmouseover="this.style.transform='translateY(-1px)'; this.style.boxShadow='0 4px 6px -1px rgba(22, 163, 74, 0.4)'"
@@ -83,36 +84,64 @@
             <span>Add availability</span>
           </button>
 
-          <!-- Cancel and Save Buttons (shown when in manual selection mode) -->
-          <div v-if="isManualSelectionMode" style="display: flex; gap: 0.75rem;">
-            <button
-              @click="handleCancelManualSelection"
-              style="flex: 1; padding: 0.75rem 1.5rem; font-size: 0.875rem; font-weight: 600; background: white; border: 1px solid #dc2626; border-radius: 0.5rem; color: #dc2626; cursor: pointer; transition: all 0.2s;"
-              onmouseover="this.style.backgroundColor='#fef2f2'; this.style.transform='translateY(-1px)'"
-              onmouseout="this.style.backgroundColor='white'; this.style.transform='translateY(0)'"
-            >
-              Cancel
-            </button>
-            <button
-              @click="handleSaveManualSelection"
-              :disabled="savingAvailability"
+          <div v-else style="display: flex; flex-direction: column; gap: 0.75rem; background: #f9fafb; border: 1px solid #e5e7eb; border-radius: 0.75rem; padding: 1rem;">
+            <label style="font-size: 0.8125rem; font-weight: 600; color: #374151; display: flex; align-items: center; gap: 0.25rem;">
+              Saving as <span style="color: #dc2626;">*</span>
+            </label>
+            <input
+              v-model="participantName"
+              @blur="handleParticipantNameBlur"
+              @input="handleParticipantNameInput"
+              type="text"
+              placeholder="Enter your name"
               :style="{
-                flex: 1,
-                padding: '0.75rem 1.5rem',
-                fontSize: '0.875rem',
-                fontWeight: '600',
-                background: savingAvailability ? '#9ca3af' : 'white',
-                border: savingAvailability ? '1px solid #9ca3af' : '1px solid #16a34a',
+                width: '100%',
+                padding: '0.65rem 0.75rem',
                 borderRadius: '0.5rem',
-                color: savingAvailability ? '#ffffff' : '#16a34a',
-                cursor: savingAvailability ? 'not-allowed' : 'pointer',
-                transition: 'all 0.2s'
+                border: shouldShowParticipantNameError ? '1px solid #dc2626' : '1px solid #d1d5db',
+                background: '#ffffff',
+                fontSize: '0.875rem',
+                color: '#111827',
+                transition: 'border-color 0.2s, box-shadow 0.2s',
+                boxShadow: shouldShowParticipantNameError ? '0 0 0 1px rgba(220, 38, 38, 0.15)' : '0 1px 2px rgba(15, 23, 42, 0.05)'
               }"
-              onmouseover="if(!this.disabled){this.style.backgroundColor='#f0fdf4'; this.style.transform='translateY(-1px)'}"
-              onmouseout="if(!this.disabled){this.style.backgroundColor='white'; this.style.transform='translateY(0)'}"
-            >
-              {{ savingAvailability ? 'Saving...' : 'Save' }}
-            </button>
+            />
+            <p v-if="shouldShowParticipantNameError" style="margin: 0; font-size: 0.75rem; color: #dc2626;">
+              {{ participantNameError }}
+            </p>
+
+            <!-- Cancel and Save Buttons (shown when in manual selection mode) -->
+            <div style="display: flex; gap: 0.75rem;">
+              <button
+                @click="handleCancelManualSelection"
+                style="flex: 1; padding: 0.75rem 1.5rem; font-size: 0.875rem; font-weight: 600; background: white; border: 1px solid #dc2626; border-radius: 0.5rem; color: #dc2626; cursor: pointer; transition: all 0.2s;"
+                onmouseover="this.style.backgroundColor='#fef2f2'; this.style.transform='translateY(-1px)'"
+                onmouseout="this.style.backgroundColor='white'; this.style.transform='translateY(0)'"
+              >
+                Cancel
+              </button>
+              <button
+                @click="handleSaveManualSelection"
+                :disabled="savingDisabled"
+                :style="{
+                  flex: 1,
+                  padding: '0.75rem 1.5rem',
+                  fontSize: '0.875rem',
+                  fontWeight: '600',
+                  background: savingDisabled ? '#9ca3af' : 'white',
+                  border: savingDisabled ? '1px solid #9ca3af' : '1px solid #16a34a',
+                  borderRadius: '0.5rem',
+                  color: savingDisabled ? '#ffffff' : '#16a34a',
+                  cursor: savingDisabled ? 'not-allowed' : 'pointer',
+                  transition: 'all 0.2s',
+                  opacity: savingDisabled ? 0.8 : 1
+                }"
+                onmouseover="if(!this.disabled){this.style.backgroundColor='#f0fdf4'; this.style.transform='translateY(-1px)'}"
+                onmouseout="if(!this.disabled){this.style.backgroundColor='white'; this.style.transform='translateY(0)'}"
+              >
+                {{ savingAvailability ? 'Saving...' : 'Save' }}
+              </button>
+            </div>
           </div>
         </div>
       </div>
@@ -130,6 +159,7 @@
           :selected-slots="selectedAvailabilitySlots"
           :slot-availability-count="slotAvailabilityCount"
           :participant-colors="participantColors"
+          :total-participants="totalParticipants"
           @cell-click="handleCellClick"
           @cell-select="handleCellSelect"
           />
@@ -164,6 +194,15 @@ async function fetchSessionData() {
   if (!sessionId.value) return
   const { data, error } = await getSession(sessionId.value)
   if (data) {
+    const availabilityCount = data.availabilities?.length ?? 0
+    const totalTimeBlocks = data.availabilities?.reduce((sum, availability) => {
+      return sum + (availability.timeBlocks?.length ?? 0)
+    }, 0) ?? 0
+    console.log('[Dashboard] fetchSessionData success', {
+      sessionId: sessionId.value,
+      availabilityCount,
+      totalTimeBlocks
+    })
     session.value = data
     syncFromSession(data)
   } else {
@@ -257,10 +296,35 @@ const savingAvailability = ref(false)
 const isManualSelectionMode = ref(false)
 const individualSlots = ref<Set<string>>(new Set())
 const participantName = ref('')
+const participantNameTouched = ref(false)
+const participantNameError = ref('')
 
 // View mode: 'group' = show combined availability, 'individual' = show one person's availability
 const viewMode = ref<'group' | 'individual'>('group')
 const editingParticipantName = ref<string | null>(null)
+const savingDisabled = computed(() => savingAvailability.value || !isParticipantNameValid.value)
+
+const sanitizedParticipantName = computed(() => participantName.value.trim())
+const isParticipantNameDuplicate = computed(() => {
+  const name = sanitizedParticipantName.value.toLowerCase()
+  if (!name) return false
+
+  return session.value?.availabilities?.some(availability => {
+    const availabilityName = availability.participantName.toLowerCase()
+    if (editingParticipantName.value && availabilityName === editingParticipantName.value.toLowerCase()) {
+      return false
+    }
+    return availabilityName === name
+  }) ?? false
+})
+
+const isParticipantNameValid = computed(() => {
+  if (!sanitizedParticipantName.value) return false
+  if (isParticipantNameDuplicate.value) return false
+  return true
+})
+
+const shouldShowParticipantNameError = computed(() => participantNameTouched.value && !!participantNameError.value)
 
 // Computed slots - shows either group or individual availability
 const selectedAvailabilitySlots = computed(() => {
@@ -312,39 +376,28 @@ const responses = computed<Response[]>(() => {
   }))
 })
 
-// Dynamic color array - gradient from light green to full green based on participant count
+// Total number of participants
+const totalParticipants = computed(() => {
+  return session.value?.availabilities?.length || 0
+})
+
+// Static color array dynamically sized so index === number of available participants
+// 0 available => white, total participants => full green
 const participantColors = computed(() => {
-  const numParticipants = session.value?.availabilities?.length || 0
-  if (numParticipants === 0) return []
+  const total = Math.max(totalParticipants.value, 1)
+  const colors: string[] = []
+  const start = { r: 255, g: 255, b: 255 }       // White
+  const end = { r: 22, g: 163, b: 74 }           // Full green (#16a34a)
 
-  // Generate 10 colors in a gradient from light green to full green
-  // Starting color (lightest): rgb(220, 252, 231) - green-100
-  // Ending color (darkest): rgb(22, 163, 74) - green-600 (full green)
-
-  const totalColors = 10
-  const allColors: string[] = []
-  const startR = 220, startG = 252, startB = 231  // Light green
-  const endR = 22, endG = 163, endB = 74          // Full green
-
-  // Generate 10 evenly spaced colors
-  for (let i = 0; i < totalColors; i++) {
-    const ratio = i / (totalColors - 1)
-    const r = Math.round(startR + (endR - startR) * ratio)
-    const g = Math.round(startG + (endG - startG) * ratio)
-    const b = Math.round(startB + (endB - startB) * ratio)
-    allColors.push(`rgb(${r}, ${g}, ${b})`)
+  for (let i = 0; i <= total; i++) {
+    const ratio = total === 0 ? 0 : i / total
+    const r = Math.round(start.r + (end.r - start.r) * ratio)
+    const g = Math.round(start.g + (end.g - start.g) * ratio)
+    const b = Math.round(start.b + (end.b - start.b) * ratio)
+    colors.push(`rgb(${r}, ${g}, ${b})`)
   }
 
-  // Return only the colors we need based on participant count
-  // Map participant count to color indices: 1 person -> index 0, max people -> index 9
-  const selectedColors: string[] = []
-  for (let i = 1; i <= numParticipants; i++) {
-    const colorIndex = Math.round((i - 1) * (totalColors - 1) / (numParticipants - 1))
-    const clampedIndex = Math.max(0, Math.min(totalColors - 1, colorIndex))
-    selectedColors.push(allColors[clampedIndex] || allColors[0] || '')
-  }
-
-  return selectedColors
+  return colors
 })
 
 // Map of slot -> count of participants available at that slot
@@ -382,6 +435,12 @@ watch(() => session.value?.availabilities, (availabilities) => {
   console.log(`[Availabilities] ${availabilities.length} participant(s) loaded`)
 }, { deep: true, immediate: true })
 
+watch([sanitizedParticipantName, isParticipantNameDuplicate], () => {
+  if (participantNameTouched.value) {
+    participantNameError.value = getParticipantNameError()
+  }
+})
+
 function formatTimeAgo(date: Date): string {
   const now = new Date()
   const diffMs = now.getTime() - date.getTime()
@@ -396,6 +455,39 @@ function formatTimeAgo(date: Date): string {
 }
 
 // No automatic syncing - only sync when explicitly fetching data
+
+function resetParticipantNameState(initialValue = '') {
+  participantName.value = initialValue
+  participantNameTouched.value = false
+  participantNameError.value = ''
+}
+
+function getParticipantNameError(): string {
+  if (!sanitizedParticipantName.value) {
+    return 'Name is required'
+  }
+  if (isParticipantNameDuplicate.value) {
+    return 'This name is already taken'
+  }
+  return ''
+}
+
+function validateParticipantName(): boolean {
+  const error = getParticipantNameError()
+  participantNameError.value = error
+  return !error
+}
+
+function handleParticipantNameBlur() {
+  participantNameTouched.value = true
+  participantNameError.value = getParticipantNameError()
+}
+
+function handleParticipantNameInput() {
+  if (participantNameTouched.value) {
+    participantNameError.value = getParticipantNameError()
+  }
+}
 
 // Helper function to update session dates in backend
 async function updateSessionDates(dates: Date[]) {
@@ -641,6 +733,27 @@ const hourlyLabels = computed(() => {
 })
 
 // Format time based on 12h/24h format
+function normalizeBackendDate(dateValue: string | Date | null | undefined): Date | null {
+  if (!dateValue) return null
+
+  let isoString = ''
+  if (typeof dateValue === 'string') {
+    isoString = dateValue
+  } else if (dateValue instanceof Date) {
+    isoString = dateValue.toISOString()
+  }
+
+  const datePart = isoString.split('T')[0]
+  if (!datePart) return null
+
+  const [year, month, day] = datePart.split('-').map(num => Number(num))
+  if ([year, month, day].some(value => Number.isNaN(value))) return null
+
+  const normalized = new Date(year, (month ?? 1) - 1, day)
+  normalized.setHours(0, 0, 0, 0)
+  return normalized
+}
+
 function formatTime(hour: number, minute: number): string {
   if (timeFormat.value === '12h') {
     const period = hour >= 12 ? 'PM' : 'AM'
@@ -877,21 +990,40 @@ function handleCellSelect(date: { date: Date; dateStr: string; dayName: string }
 function handleEditParticipant(name: string) {
   viewMode.value = 'individual'
   editingParticipantName.value = name
-  participantName.value = name
+  resetParticipantNameState(name)
   isManualSelectionMode.value = true
 
   // Load this participant's availability
   individualSlots.value.clear()
 
   const participant = session.value?.availabilities.find(a => a.participantName === name)
-  if (participant) {
-    for (const block of participant.timeBlocks) {
-      const date = new Date(block.date)
-      const timeSlot = formatTime(block.hour, block.halfHour ? 30 : 0)
-      const slotKey = `${date.getTime()}-${timeSlot}`
-      individualSlots.value.add(slotKey)
-    }
+  console.log('[Dashboard] handleEditParticipant', {
+    participantName: name,
+    found: Boolean(participant),
+    timeBlocks: participant?.timeBlocks?.length ?? 0
+  })
+
+  if (!participant) {
+    console.warn('[Dashboard] No availability found for participant', name)
+    return
   }
+
+  for (const block of participant.timeBlocks) {
+    const normalizedDate = normalizeBackendDate(block.date)
+    if (!normalizedDate) {
+      console.warn('[Dashboard] Skipping block with unparsable date', block)
+      continue
+    }
+
+    const timeSlot = formatTime(block.hour, block.halfHour ? 30 : 0)
+    const slotKey = `${normalizedDate.getTime()}-${timeSlot}`
+    individualSlots.value.add(slotKey)
+  }
+
+  console.log('[Dashboard] Loaded participant slots', {
+    participantName: name,
+    appliedSlots: individualSlots.value.size
+  })
 }
 
 // Handle delete participant
@@ -920,13 +1052,7 @@ function handleManualSelection() {
   isManualSelectionMode.value = true
   editingParticipantName.value = null
 
-  // Prompt for participant name
-  const name = prompt('Please enter your name:')
-  if (name && name.trim()) {
-    participantName.value = name.trim()
-  } else {
-    participantName.value = 'Guest'
-  }
+  resetParticipantNameState('')
 
   // Clear individual slots for new participant
   individualSlots.value.clear()
@@ -938,7 +1064,7 @@ function handleCancelManualSelection() {
   viewMode.value = 'group'
   editingParticipantName.value = null
   individualSlots.value.clear()
-  participantName.value = ''
+  resetParticipantNameState('')
 }
 
 // Handle save manual selection - BACKEND INTEGRATION
@@ -948,13 +1074,9 @@ async function handleSaveManualSelection() {
     return
   }
 
-  if (!participantName.value) {
-    const name = prompt('Please enter your name:')
-    if (name && name.trim()) {
-      participantName.value = name.trim()
-    } else {
-      return
-    }
+  participantNameTouched.value = true
+  if (!validateParticipantName()) {
+    return
   }
 
   savingAvailability.value = true
@@ -984,8 +1106,9 @@ async function handleSaveManualSelection() {
   })
 
   // Call backend API
+  const nameToSave = sanitizedParticipantName.value
   const { data, error } = await updateAvailability(sessionId.value, {
-    participantName: participantName.value,
+    participantName: nameToSave,
     timeBlocks: timeBlocks
   })
 
@@ -997,7 +1120,7 @@ async function handleSaveManualSelection() {
     viewMode.value = 'group'
     editingParticipantName.value = null
     individualSlots.value.clear()
-    participantName.value = ''
+    resetParticipantNameState('')
 
     // Fetch fresh session data to show updated availabilities
     await fetchSessionData()

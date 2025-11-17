@@ -42,6 +42,8 @@ export const getSession = async (req: Request, res: Response, next: NextFunction
   try {
     const { sessionId } = req.params;
 
+    console.log('[Sessions] Incoming getSession request', { sessionId });
+
     if (!mongoose.Types.ObjectId.isValid(sessionId)) {
       return res.status(404).json({ error: 'Session not found' });
     }
@@ -51,6 +53,18 @@ export const getSession = async (req: Request, res: Response, next: NextFunction
     if (!session) {
       return res.status(404).json({ error: 'Session not found' });
     }
+
+    const availabilityCount = session.availabilities?.length ?? 0;
+    const totalTimeBlocks = session.availabilities?.reduce((sum: number, availability: any) => {
+      return sum + (availability.timeBlocks?.length ?? 0);
+    }, 0) ?? 0;
+
+    console.log('[Sessions] Returning session payload', {
+      sessionId: session._id.toString(),
+      possibleDates: session.possibleDates?.length ?? 0,
+      availabilityCount,
+      totalTimeBlocks
+    });
 
     res.json({ session });
   } catch (error) {
