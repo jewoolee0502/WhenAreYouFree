@@ -98,13 +98,7 @@ const SessionSchema = new Schema<ISession>({
       type: Number,
       required: true,
       min: 0,
-      max: 23,
-      validate: {
-        validator: function(this: ISession, value: number) {
-          return value > this.hourRange.start;
-        },
-        message: 'End hour must be greater than start hour'
-      }
+      max: 23
     }
   },
   timeBlockUnit: {
@@ -130,6 +124,45 @@ const SessionSchema = new Schema<ISession>({
   }
 }, {
   timestamps: true  // Automatically adds createdAt and updatedAt
+});
+
+// Pre-save hook to validate hourRange
+SessionSchema.pre('save', function(next) {
+  // Validate that end hour is greater than start hour
+  if (this.hourRange && this.hourRange.start !== undefined && this.hourRange.end !== undefined) {
+    if (this.hourRange.end <= this.hourRange.start) {
+      const error = new Error('End hour must be greater than start hour');
+      error.name = 'ValidationError';
+      return next(error);
+    }
+  }
+  next();
+});
+
+// Pre-update hook to validate hourRange during updates
+SessionSchema.pre('findOneAndUpdate', function(next) {
+  const update = this.getUpdate() as any;
+
+  // Handle both direct updates and $set operations
+  const hourRangeUpdate = update.hourRange || update.$set?.hourRange;
+
+  if (hourRangeUpdate) {
+    const start = hourRangeUpdate.start;
+    const end = hourRangeUpdate.end;
+
+    // If both start and end are being updated, validate them
+    if (start !== undefined && end !== undefined) {
+      if (end <= start) {
+        const error = new Error('End hour must be greater than start hour');
+        error.name = 'ValidationError';
+        return next(error);
+      }
+    }
+    // If only one is being updated, we need to check against the existing document
+    // This will be handled by the validation during the actual update with runValidators
+  }
+
+  next();
 });
 
 // Method to check if a participant already exists

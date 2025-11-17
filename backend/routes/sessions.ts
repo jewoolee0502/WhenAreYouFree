@@ -16,6 +16,9 @@ router.put('/:sessionId', sessionController.updateSession);
 // Add or update participant availability
 router.post('/:sessionId/availability', validateUpdateAvailability, sessionController.updateAvailability);
 
+// Delete participant availability
+router.delete('/:sessionId/availability/:participantName', sessionController.deleteAvailability);
+
 // Delete session
 router.delete('/:sessionId', sessionController.deleteSession);
 

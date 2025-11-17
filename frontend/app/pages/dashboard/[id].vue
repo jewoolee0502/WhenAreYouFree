@@ -9,6 +9,7 @@
       <div class="settings-buttons-grid" style="display: grid; grid-template-columns: 1fr 320px; gap: 1.5rem; margin-bottom: 1.5rem; align-items: start; flex-shrink: 0;">
         <!-- Calendar Settings -->
         <CalendarSettings
+          v-model:session-title="sessionTitle"
           v-model:timezone="timezone"
           v-model:timeFormat="timeFormat"
           v-model:dateInputText="dateInputText"
@@ -127,13 +128,15 @@
           :time-increment="timeIncrement"
           :manual-selection-mode="isManualSelectionMode"
           :selected-slots="selectedAvailabilitySlots"
+          :slot-availability-count="slotAvailabilityCount"
+          :participant-colors="participantColors"
           @cell-click="handleCellClick"
           @cell-select="handleCellSelect"
           />
         </div>
 
         <!-- Responses Section -->
-        <Responses :responses="responses" @edit="handleEditParticipant" />
+        <Responses :responses="responses" @edit="handleEditParticipant" @delete="handleDeleteParticipant" />
       </div>
     </div>
 
@@ -146,16 +149,68 @@
 </template>
 
 <script setup lang="ts">
-import { ref, computed, onMounted, onUnmounted, onBeforeUnmount, watch } from 'vue'
+import { ref, computed, onMounted, onUnmounted, watch } from 'vue'
 import { useRoute } from 'vue-router'
 
 const route = useRoute()
 const sessionId = computed(() => route.params.id as string)
 
 // Get API composable
-const { updateAvailability } = useSessionApi()
-const pollingSessionId = ref(sessionId.value)
-const { session, error: pollingError, startPolling, stopPolling } = useSessionPolling(pollingSessionId, 5000)
+const { updateAvailability, updateSession, deleteAvailability, getSession } = useSessionApi()
+const session = ref<any>(null)
+
+// Helper to fetch session data and sync to UI
+async function fetchSessionData() {
+  if (!sessionId.value) return
+  const { data, error } = await getSession(sessionId.value)
+  if (data) {
+    session.value = data
+    syncFromSession(data)
+  } else {
+    console.error('[Dashboard] Failed to fetch session:', error)
+  }
+}
+
+// Sync UI from session data
+function syncFromSession(sessionData: any) {
+  // Sync title
+  if (sessionData.title) {
+    sessionTitle.value = sessionData.title
+  }
+
+  // Sync dates
+  if (sessionData.possibleDates && sessionData.possibleDates.length > 0) {
+    const dates = sessionData.possibleDates.map((dateStr: any) => {
+      if (typeof dateStr === 'string') {
+        const parts = dateStr.split('T')[0]?.split('-').map(Number) || []
+        const [year, month, day] = parts
+        if (year === undefined || month === undefined || day === undefined) return null
+        const date = new Date(year, month - 1, day)
+        date.setHours(0, 0, 0, 0)
+        return date
+      } else {
+        const date = new Date(dateStr)
+        date.setHours(0, 0, 0, 0)
+        return date
+      }
+    }).filter((d: any) => d !== null && !isNaN(d.getTime()))
+
+    if (dates.length > 0) {
+      selectedDates.value = dates
+    }
+  }
+
+  // Sync hour range
+  if (sessionData.hourRange) {
+    startTime.value = `${String(sessionData.hourRange.start).padStart(2, '0')}:00`
+    endTime.value = `${String(sessionData.hourRange.end).padStart(2, '0')}:00`
+  }
+
+  // Sync time increment
+  if (sessionData.timeBlockUnit) {
+    timeIncrement.value = sessionData.timeBlockUnit === 'half-hour' ? 30 : 60
+  }
+}
 
 // Meta tags
 useHead({
@@ -172,6 +227,7 @@ const isAuthenticated = ref(false)
 const showModal = ref(false)
 
 // Calendar settings
+const sessionTitle = ref('New Meeting')
 const selectedDates = ref<Date[]>([])
 const startTime = ref('09:00')
 const endTime = ref('16:00')
@@ -218,7 +274,17 @@ const selectedAvailabilitySlots = computed(() => {
   if (session.value?.availabilities) {
     for (const availability of session.value.availabilities) {
       for (const block of availability.timeBlocks) {
-        const date = new Date(block.date)
+        // Parse date string as local date (not UTC) to match calendar's local dates
+        const dateStr = block.date.split('T')[0]
+        if (!dateStr) continue
+
+        const parts = dateStr.split('-').map(Number)
+        const [year, month, day] = parts
+        if (year === undefined || month === undefined || day === undefined) continue
+
+        const date = new Date(year, month - 1, day) // Create local date
+        date.setHours(0, 0, 0, 0) // Normalize to midnight
+
         const timeSlot = formatTime(block.hour, block.halfHour ? 30 : 0)
         const slotKey = `${date.getTime()}-${timeSlot}`
         combinedSlots.add(slotKey)
@@ -246,6 +312,76 @@ const responses = computed<Response[]>(() => {
   }))
 })
 
+// Dynamic color array - gradient from light green to full green based on participant count
+const participantColors = computed(() => {
+  const numParticipants = session.value?.availabilities?.length || 0
+  if (numParticipants === 0) return []
+
+  // Generate 10 colors in a gradient from light green to full green
+  // Starting color (lightest): rgb(220, 252, 231) - green-100
+  // Ending color (darkest): rgb(22, 163, 74) - green-600 (full green)
+
+  const totalColors = 10
+  const allColors: string[] = []
+  const startR = 220, startG = 252, startB = 231  // Light green
+  const endR = 22, endG = 163, endB = 74          // Full green
+
+  // Generate 10 evenly spaced colors
+  for (let i = 0; i < totalColors; i++) {
+    const ratio = i / (totalColors - 1)
+    const r = Math.round(startR + (endR - startR) * ratio)
+    const g = Math.round(startG + (endG - startG) * ratio)
+    const b = Math.round(startB + (endB - startB) * ratio)
+    allColors.push(`rgb(${r}, ${g}, ${b})`)
+  }
+
+  // Return only the colors we need based on participant count
+  // Map participant count to color indices: 1 person -> index 0, max people -> index 9
+  const selectedColors: string[] = []
+  for (let i = 1; i <= numParticipants; i++) {
+    const colorIndex = Math.round((i - 1) * (totalColors - 1) / (numParticipants - 1))
+    const clampedIndex = Math.max(0, Math.min(totalColors - 1, colorIndex))
+    selectedColors.push(allColors[clampedIndex] || allColors[0] || '')
+  }
+
+  return selectedColors
+})
+
+// Map of slot -> count of participants available at that slot
+const slotAvailabilityCount = computed(() => {
+  const countMap = new Map<string, number>()
+
+  if (session.value?.availabilities) {
+    for (const availability of session.value.availabilities) {
+      for (const block of availability.timeBlocks) {
+        // Parse date string as local date (not UTC) to match calendar's local dates
+        const dateStr = block.date.split('T')[0]
+        if (!dateStr) continue
+
+        const parts = dateStr.split('-').map(Number)
+        const [year, month, day] = parts
+        if (year === undefined || month === undefined || day === undefined) continue
+
+        const date = new Date(year, month - 1, day) // Create local date
+        date.setHours(0, 0, 0, 0) // Normalize to midnight
+
+        const timeSlot = formatTime(block.hour, block.halfHour ? 30 : 0)
+        const slotKey = `${date.getTime()}-${timeSlot}`
+
+        countMap.set(slotKey, (countMap.get(slotKey) || 0) + 1)
+      }
+    }
+  }
+
+  return countMap
+})
+
+// Watch for changes in availabilities (simplified logging for debugging)
+watch(() => session.value?.availabilities, (availabilities) => {
+  if (!availabilities) return
+  console.log(`[Availabilities] ${availabilities.length} participant(s) loaded`)
+}, { deep: true, immediate: true })
+
 function formatTimeAgo(date: Date): string {
   const now = new Date()
   const diffMs = now.getTime() - date.getTime()
@@ -259,22 +395,114 @@ function formatTimeAgo(date: Date): string {
   return `${diffDays} day${diffDays > 1 ? 's' : ''} ago`
 }
 
-// Initialize with default dates (today + next 4 days)
-onMounted(() => {
-  // Start polling for session updates
-  startPolling()
+// No automatic syncing - only sync when explicitly fetching data
 
-  if (selectedDates.value.length === 0) {
-    const today = new Date()
-    today.setHours(0, 0, 0, 0)
-    for (let i = 0; i < 5; i++) {
-      const date = new Date(today)
-      date.setDate(today.getDate() + i)
-      selectedDates.value.push(date)
-    }
+// Helper function to update session dates in backend
+async function updateSessionDates(dates: Date[]) {
+  if (!sessionId.value) return
+
+  const possibleDates = dates.map(date => {
+    const year = date.getFullYear()
+    const month = String(date.getMonth() + 1).padStart(2, '0')
+    const day = String(date.getDate()).padStart(2, '0')
+    return `${year}-${month}-${day}`
+  })
+
+  console.log('[Dashboard] Updating backend with dates:', possibleDates)
+
+  const { error } = await updateSession(sessionId.value, { possibleDates })
+
+  if (error) {
+    console.error('[Dashboard] Failed to update dates:', error)
+  } else {
+    console.log('[Dashboard] Successfully updated dates')
   }
-  updateDateInputText()
-  updateCalendar()
+}
+
+// Helper function to update session time range in backend
+async function updateSessionTimeRange(start: string, end: string) {
+  if (!sessionId.value) return
+
+  const startHour = parseInt(start.split(':')[0] || '9')
+  const endHour = parseInt(end.split(':')[0] || '16')
+
+  const hourRange = { start: startHour, end: endHour }
+
+  console.log('[Dashboard] Updating backend with time range:', hourRange)
+
+  const { error } = await updateSession(sessionId.value, { hourRange })
+
+  if (error) {
+    console.error('[Dashboard] Failed to update time range:', error)
+  } else {
+    console.log('[Dashboard] Successfully updated time range')
+  }
+}
+
+// Helper function to update session time increment in backend
+async function updateSessionTimeIncrement(increment: 15 | 30 | 60) {
+  if (!sessionId.value) return
+
+  const timeBlockUnit = increment === 30 ? 'half-hour' : 'hour'
+
+  console.log('[Dashboard] Updating backend with increment:', timeBlockUnit)
+
+  const { error } = await updateSession(sessionId.value, { timeBlockUnit })
+
+  if (error) {
+    console.error('[Dashboard] Failed to update time increment:', error)
+  } else {
+    console.log('[Dashboard] Successfully updated time increment')
+  }
+}
+
+// Watch for user changes to title and update backend
+watch(sessionTitle, async (newTitle) => {
+  if (!sessionId.value) return
+
+  console.log('[Dashboard] User changed title, updating backend...', newTitle)
+
+  const { error } = await updateSession(sessionId.value, { title: newTitle })
+
+  if (error) {
+    console.error('[Dashboard] Failed to update title:', error)
+  } else {
+    console.log('[Dashboard] Successfully updated title')
+  }
+})
+
+// Watch for user changes to dates and update backend
+watch(selectedDates, (newDates, oldDates) => {
+  if (newDates.length === 0 || !oldDates) return
+
+  console.log('[Dashboard] User changed dates, updating backend...', {
+    newDates: newDates.map(d => d.toLocaleDateString())
+  })
+  updateSessionDates(newDates)
+}, { deep: true })
+
+// Watch for user changes to start time and update backend
+watch(startTime, (newStartTime) => {
+  console.log('[Dashboard] User changed start time, updating backend...')
+  updateSessionTimeRange(newStartTime, endTime.value)
+})
+
+// Watch for user changes to end time and update backend
+watch(endTime, (newEndTime) => {
+  console.log('[Dashboard] User changed end time, updating backend...')
+  updateSessionTimeRange(startTime.value, newEndTime)
+})
+
+// Watch for user changes to time increment and update backend
+watch(timeIncrement, (newIncrement) => {
+  console.log('[Dashboard] User changed time increment, updating backend...')
+  updateSessionTimeIncrement(newIncrement)
+})
+
+// Initialize on mount
+onMounted(async () => {
+  // Fetch session data on mount
+  await fetchSessionData()
 
   // Close date picker when clicking outside
   document.addEventListener('click', handleClickOutside)
@@ -282,10 +510,6 @@ onMounted(() => {
 
 onUnmounted(() => {
   document.removeEventListener('click', handleClickOutside)
-})
-
-onBeforeUnmount(() => {
-  stopPolling()
 })
 
 function handleClickOutside(event: MouseEvent) {
@@ -670,6 +894,26 @@ function handleEditParticipant(name: string) {
   }
 }
 
+// Handle delete participant
+async function handleDeleteParticipant(name: string) {
+  if (!confirm(`Are you sure you want to delete ${name}'s availability?`)) {
+    return
+  }
+
+  console.log('[Dashboard] Deleting availability for:', name)
+
+  const { error } = await deleteAvailability(sessionId.value, name)
+
+  if (error) {
+    alert(`Failed to delete availability: ${error}`)
+    console.error('[Dashboard] Failed to delete availability:', error)
+  } else {
+    console.log('[Dashboard] Successfully deleted availability')
+    // Fetch fresh data to update the UI immediately
+    await fetchSessionData()
+  }
+}
+
 // Handle manual selection mode - new participant
 function handleManualSelection() {
   viewMode.value = 'individual'
@@ -755,6 +999,8 @@ async function handleSaveManualSelection() {
     individualSlots.value.clear()
     participantName.value = ''
 
+    // Fetch fresh session data to show updated availabilities
+    await fetchSessionData()
   } else {
     alert(`Failed to save availability: ${error}`)
   }

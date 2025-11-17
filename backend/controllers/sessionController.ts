@@ -64,14 +64,77 @@ export const updateSession = async (req: Request, res: Response, next: NextFunct
     const { sessionId } = req.params;
     const updates: any = {};
 
+    if (!mongoose.Types.ObjectId.isValid(sessionId)) {
+      return res.status(404).json({ error: 'Session not found' });
+    }
+
+    // Fetch the current session for validation
+    const currentSession = await Session.findById(sessionId);
+
+    if (!currentSession) {
+      return res.status(404).json({ error: 'Session not found' });
+    }
+
     // Only allow specific fields to be updated
     if (req.body.title !== undefined) updates.title = req.body.title;
     if (req.body.expirationDate !== undefined) {
       updates.expirationDate = new Date(req.body.expirationDate);
     }
+    if (req.body.possibleDates !== undefined) {
+      // Validate and convert dates
+      const dates = req.body.possibleDates.map((date: string) => new Date(date));
 
-    if (!mongoose.Types.ObjectId.isValid(sessionId)) {
-      return res.status(404).json({ error: 'Session not found' });
+      // Check for invalid dates
+      const hasInvalidDate = dates.some((date: Date) => isNaN(date.getTime()));
+      if (hasInvalidDate) {
+        return res.status(400).json({
+          error: 'Validation failed',
+          message: 'Invalid date format in possibleDates'
+        });
+      }
+
+      // Check date count (1-14 dates allowed per schema)
+      if (dates.length === 0 || dates.length > 14) {
+        return res.status(400).json({
+          error: 'Validation failed',
+          message: 'Must have between 1 and 14 possible dates'
+        });
+      }
+
+      updates.possibleDates = dates;
+    }
+    if (req.body.hourRange !== undefined) {
+      // Validate hourRange before updating
+      const newHourRange = req.body.hourRange;
+
+      // Check if current session has hourRange (should always exist per schema, but be safe)
+      if (!currentSession.hourRange) {
+        return res.status(500).json({
+          error: 'Internal error',
+          message: 'Current session missing hourRange'
+        });
+      }
+
+      // Merge with existing values to handle partial updates
+      const finalStart = newHourRange.start !== undefined ? newHourRange.start : currentSession.hourRange.start;
+      const finalEnd = newHourRange.end !== undefined ? newHourRange.end : currentSession.hourRange.end;
+
+      // Validate the final values
+      if (finalEnd <= finalStart) {
+        return res.status(400).json({
+          error: 'Validation failed',
+          message: 'End hour must be greater than start hour'
+        });
+      }
+
+      // Set the complete hourRange object
+      updates.hourRange = {
+        start: finalStart,
+        end: finalEnd
+      };
+    }
+    if (req.body.timeBlockUnit !== undefined) {
+      updates.timeBlockUnit = req.body.timeBlockUnit;
     }
 
     const session = await Session.findByIdAndUpdate(
@@ -88,7 +151,9 @@ export const updateSession = async (req: Request, res: Response, next: NextFunct
       message: 'Session updated successfully',
       session
     });
-  } catch (error) {
+  } catch (error: any) {
+    console.error('[updateSession] Error:', error);
+    console.error('[updateSession] Stack:', error.stack);
     next(error);
   }
 };
@@ -126,6 +191,37 @@ export const updateAvailability = async (req: Request, res: Response, next: Next
     res.json({
       message: 'Availability updated successfully',
       availability: updatedAvailability
+    });
+  } catch (error) {
+    next(error);
+  }
+};
+
+// Delete participant availability
+export const deleteAvailability = async (req: Request, res: Response, next: NextFunction) => {
+  try {
+    const { sessionId, participantName } = req.params;
+
+    if (!mongoose.Types.ObjectId.isValid(sessionId)) {
+      return res.status(404).json({ error: 'Session not found' });
+    }
+
+    const session = await Session.findById(sessionId);
+
+    if (!session) {
+      return res.status(404).json({ error: 'Session not found' });
+    }
+
+    // Remove the participant's availability
+    session.availabilities = session.availabilities.filter(
+      (avail) => avail.participantName !== participantName
+    );
+
+    await session.save();
+
+    res.json({
+      message: 'Availability deleted successfully',
+      session
     });
   } catch (error) {
     next(error);

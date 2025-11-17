@@ -2,7 +2,14 @@
   <div style="background: #f9fafb; border: 1px solid #e5e7eb; border-radius: 0.75rem; padding: 1.5rem;">
     <!-- Header with Title and Timezone/Format Controls -->
     <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 1.5rem; flex-wrap: wrap; gap: 1rem;">
-      <h2 style="font-size: 1.5rem; font-weight: 700; color: #111827; margin: 0;">Calendar Settings</h2>
+      <h2
+        contenteditable="true"
+        @blur="$emit('update:sessionTitle', ($event.target as HTMLElement).textContent || '')"
+        @keydown.enter.prevent="($event.target as HTMLElement).blur()"
+        style="font-size: 1.5rem; font-weight: 700; color: #111827; margin: 0; outline: none; padding: 0.25rem 0.5rem; border-radius: 0.375rem; cursor: text; transition: background-color 0.2s;"
+        onfocus="this.style.backgroundColor='#f3f4f6'"
+        onblur="this.style.backgroundColor='transparent'"
+      >{{ sessionTitle }}</h2>
       
       <!-- Timezone and Time Format -->
       <div style="display: flex; align-items: center; gap: 1rem; flex-wrap: wrap;">
@@ -199,6 +206,7 @@
 import { computed } from 'vue'
 
 interface Props {
+  sessionTitle: string
   timezone: string
   timeFormat: string
   timeIncrement: 15 | 30 | 60
@@ -219,6 +227,7 @@ interface Props {
 const props = defineProps<Props>()
 
 defineEmits<{
+  'update:sessionTitle': [value: string]
   'update:timezone': [value: string]
   'update:timeFormat': [value: string]
   'update:timeIncrement': [value: 15 | 30 | 60]

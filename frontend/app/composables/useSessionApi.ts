@@ -44,6 +44,12 @@ interface CreateSessionData {
 interface UpdateSessionData {
   title?: string;
   expirationDate?: string;
+  possibleDates?: string[];
+  hourRange?: {
+    start: number;
+    end: number;
+  };
+  timeBlockUnit?: 'hour' | 'half-hour';
 }
 
 interface UpdateAvailabilityData {
@@ -132,6 +138,24 @@ export const useSessionApi = () => {
   };
 
   /**
+   * Delete participant availability
+   */
+  const deleteAvailability = async (sessionId: string, participantName: string) => {
+    try {
+      const response = await $fetch<{
+        message: string;
+        session: Session;
+      }>(`${apiBase}/api/sessions/${sessionId}/availability/${encodeURIComponent(participantName)}`, {
+        method: 'DELETE'
+      });
+      return { data: response.session, error: null };
+    } catch (error: any) {
+      console.error('Error deleting availability:', error);
+      return { data: null, error: error.data?.error || 'Failed to delete availability' };
+    }
+  };
+
+  /**
    * Delete session
    */
   const deleteSession = async (sessionId: string) => {
@@ -154,6 +178,7 @@ export const useSessionApi = () => {
     getSession,
     updateSession,
     updateAvailability,
+    deleteAvailability,
     deleteSession
   };
 };
@@ -165,12 +190,13 @@ export const useSessionPolling = (sessionId: Ref<string | null>, intervalMs = 50
   const session = ref<Session | null>(null);
   const error = ref<string | null>(null);
   const isPolling = ref(false);
+  const isPaused = ref(false);
   let pollingInterval: NodeJS.Timeout | null = null;
 
   const { getSession } = useSessionApi();
 
   const fetchSession = async () => {
-    if (!sessionId.value) return;
+    if (!sessionId.value || isPaused.value) return;
 
     const { data, error: fetchError } = await getSession(sessionId.value);
     if (data) {
@@ -200,6 +226,16 @@ export const useSessionPolling = (sessionId: Ref<string | null>, intervalMs = 50
     isPolling.value = false;
   };
 
+  const pausePolling = () => {
+    isPaused.value = true;
+  };
+
+  const resumePolling = async () => {
+    isPaused.value = false;
+    // Fetch immediately when resuming to get latest data
+    await fetchSession();
+  };
+
   // Auto-cleanup on unmount
   onUnmounted(() => {
     stopPolling();
@@ -209,8 +245,11 @@ export const useSessionPolling = (sessionId: Ref<string | null>, intervalMs = 50
     session,
     error,
     isPolling,
+    isPaused,
     fetchSession,
     startPolling,
-    stopPolling
+    stopPolling,
+    pausePolling,
+    resumePolling
   };
 };
