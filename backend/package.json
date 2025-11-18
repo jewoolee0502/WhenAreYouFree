@@ -1,23 +1,25 @@
 {
-  "name": "express",
+  "name": "backend",
   "version": "1.0.0",
   "license": "MIT",
+  "module": "index.ts",
+  "private": true,
+  "type": "module",
   "scripts": {
-    "dev": "ts-node src/index.ts"
+    "start": "bun run index.ts",
+    "dev": "bun --watch index.ts"
   },
   "dependencies": {
-    "@prisma/client": "6.9.0",
-    "@prisma/extension-accelerate": "2.0.2",
-    "express": "5.1.0"
+    "@types/express": "^5.0.5",
+    "cors": "^2.8.5",
+    "dotenv": "^16.4.5",
+    "express": "^5.1.0",
+    "express-validator": "^7.2.1",
+    "mongoose": "^8.19.3"
   },
   "devDependencies": {
-    "@types/express": "5.0.3",
-    "@types/node": "22.15.32",
-    "prisma": "6.9.0",
-    "ts-node": "10.9.2",
-    "typescript": "5.8.2"
-  },
-  "prisma": {
-    "seed": "ts-node prisma/seed.ts"
+    "@types/bun": "latest",
+    "@types/cors": "^2.8.17",
+    "@types/mongoose": "^5.11.97"
   }
 }

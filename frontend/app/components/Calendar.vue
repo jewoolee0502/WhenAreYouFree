@@ -45,14 +45,14 @@
         </div>
 
         <!-- Calendar Cells for this time slot - One per date -->
-        <div 
-          v-for="(date, dateIndex) in calendarDates" 
+        <div
+          v-for="(date, dateIndex) in calendarDates"
           :key="`${timeIndex}-${dateIndex}`"
           :data-date-index="dateIndex"
           :data-time-index="timeIndex"
           data-calendar-cell
           class="calendar-cell"
-          :class="{ 
+          :class="{
             'is-manual-mode': manualSelectionMode,
             'is-selected': isCellSelected(date, timeSlot),
             'is-in-drag-range': isDragging && isCellInDragRange(date, timeSlot),
@@ -60,7 +60,11 @@
             'is-hour-start': isFirstSlotOfHour(timeIndex),
             'is-hovered': isCellHovered(date, timeSlot)
           }"
-          :style="{ gridRow: timeIndex + 1, gridColumn: dateIndex + 2 }"
+          :style="{
+            gridRow: timeIndex + 1,
+            gridColumn: dateIndex + 2,
+            backgroundColor: manualSelectionMode ? undefined : getCellBackgroundColor(date, timeSlot)
+          }"
           @mouseenter="handleCellHover($event, true, date, timeSlot)"
           @mouseleave="handleCellHover($event, false, date, timeSlot)"
           @mousedown="handleCellMouseDown($event, date, timeSlot)"
@@ -82,13 +86,27 @@ interface Props {
   timeIncrement?: 15 | 30 | 60
   manualSelectionMode?: boolean
   selectedSlots?: Set<string>
+  slotAvailabilityCount?: Map<string, number>
+  participantColors?: string[]
+  totalParticipants?: number
 }
 
 const props = withDefaults(defineProps<Props>(), {
   timeIncrement: 60,
   manualSelectionMode: false,
-  selectedSlots: () => new Set<string>()
+  selectedSlots: () => new Set<string>(),
+  slotAvailabilityCount: () => new Map<string, number>(),
+  participantColors: () => [],
+  totalParticipants: 0
 })
+
+// Debug: watch props to see when they change (optional - can be removed in production)
+// watch(() => [props.slotAvailabilityCount?.size, props.participantColors?.length], ([slotCount, colorCount]) => {
+//   console.log('[Calendar] Props updated:', {
+//     slotAvailabilityCount: slotCount,
+//     participantColors: colorCount
+//   })
+// }, { immediate: true })
 
 // Parse hour from time string (handles both 12h and 24h formats)
 function parseHourFromTimeString(timeStr: string): number | null {
@@ -278,9 +296,42 @@ function getCellKey(date: { date: Date; dateStr: string; dayName: string }, time
 }
 
 function isCellSelected(date: { date: Date; dateStr: string; dayName: string }, timeSlot: string): boolean {
-  if (!props.manualSelectionMode) return false
+  // Show selected slots in both manual mode AND view mode (for displaying group availability)
   const key = getCellKey(date, timeSlot)
   return props.selectedSlots?.has(key) ?? false
+}
+
+// Get the background color for a cell based on availability count
+function getCellBackgroundColor(date: { date: Date; dateStr: string; dayName: string }, timeSlot: string): string {
+  // In manual selection mode, use the original colors
+  if (props.manualSelectionMode) {
+    return '' // Will use CSS classes
+  }
+
+  // Get availability count for this slot
+  const key = getCellKey(date, timeSlot)
+  const numberOfAvailablePeople = props.slotAvailabilityCount?.get(key) || 0
+
+  // Determine the color index directly from availability count
+  const colorIndex = Math.min(
+    numberOfAvailablePeople,
+    Math.max(0, (props.participantColors?.length || 1) - 1)
+  )
+  const color = props.participantColors?.[colorIndex] || 'white'
+
+  // Debug logging (can be removed in production)
+  if (numberOfAvailablePeople > 0) {
+    console.log(`[Calendar] Cell color calculation:`, {
+      slot: `${date.dateStr} ${timeSlot}`,
+      availablePeople: numberOfAvailablePeople,
+      totalParticipants: props.totalParticipants,
+      totalColors: props.participantColors?.length ?? 0,
+      colorIndex,
+      color
+    })
+  }
+
+  return color
 }
 
 function isCellHovered(date: { date: Date; dateStr: string; dayName: string }, timeSlot: string): boolean {
@@ -598,40 +649,40 @@ function handleCellClick(date: { date: Date; dateStr: string; dayName: string },
 
 /* Manual mode: all selectable slots are pastel red */
 .calendar-cell.is-manual-mode {
-  background: #fecaca;
+  background: #fecaca !important;
 }
 
 /* Hover effect for manual mode slots */
 .calendar-cell.is-manual-mode.is-hovered:not(.is-selected) {
-  background: #fca5a5;
+  background: #fca5a5 !important;
 }
 
 /* Selected slots in manual mode: pastel green */
 .calendar-cell.is-manual-mode.is-selected {
-  background: #a5d6a7;
+  background: #a5d6a7 !important;
 }
 
 /* Hover effect for selected slots */
 .calendar-cell.is-manual-mode.is-selected.is-hovered {
-  background: #86c988;
+  background: #86c988 !important;
 }
 
-/* When2meet-style selection (for non-manual mode) */
-.calendar-cell.is-selected {
+/* When2meet-style selection (for non-manual mode) - removed since we use dynamic colors */
+/* .calendar-cell.is-selected {
   background: #a5d6a7;
+} */
+
+/* Drag selection preview - only in manual mode */
+.calendar-cell.is-manual-mode.is-in-drag-range {
+  background: #c8e6c9 !important;
 }
 
-/* Drag selection preview */
-.calendar-cell.is-in-drag-range {
-  background: #c8e6c9;
+.calendar-cell.is-manual-mode.is-in-drag-range.is-drag-selecting {
+  background: #a5d6a7 !important;
 }
 
-.calendar-cell.is-in-drag-range.is-drag-selecting {
-  background: #a5d6a7;
-}
-
-.calendar-cell.is-in-drag-range:not(.is-drag-selecting) {
-  background: #ffcdd2;
+.calendar-cell.is-manual-mode.is-in-drag-range:not(.is-drag-selecting) {
+  background: #ffcdd2 !important;
 }
 
 /* Responsive adjustments */
