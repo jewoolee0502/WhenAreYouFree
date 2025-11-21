@@ -1,9 +1,24 @@
 # Docker
-# Build a Docker image
+# Build Docker images for frontend and backend
 # https://docs.microsoft.com/azure/devops/pipelines/languages/docker
 
+# Trigger on any branch changes and when merged to main
 trigger:
-- develop
+  branches:
+    include:
+      - '*'      # Trigger on any branch
+      - main     # Explicitly include main for merges
+  paths:
+    exclude:
+      - README.md
+      - LICENSE
+
+# Also trigger on pull requests targeting main
+pr:
+  branches:
+    include:
+      - main
+      - develop
 
 resources:
 - repo: self
@@ -13,17 +28,34 @@ variables:
 
 stages:
 - stage: Build
-  displayName: Build image
+  displayName: Build Docker images
   jobs:
-  - job: Build
-    displayName: Build
+  - job: BuildFrontend
+    displayName: Build Frontend Image
     pool:
       vmImage: ubuntu-latest
     steps:
     - task: Docker@2
-      displayName: Build an image
+      displayName: Build Frontend Image
       inputs:
         command: build
         dockerfile: '$(Build.SourcesDirectory)/frontend/Dockerfile.prod'
+        buildContext: '$(Build.SourcesDirectory)/frontend'
         tags: |
-          $(tag)
+          wayf-frontend:$(tag)
+          wayf-frontend:latest
+
+  - job: BuildBackend
+    displayName: Build Backend Image
+    pool:
+      vmImage: ubuntu-latest
+    steps:
+    - task: Docker@2
+      displayName: Build Backend Image
+      inputs:
+        command: build
+        dockerfile: '$(Build.SourcesDirectory)/backend/Dockerfile'
+        buildContext: '$(Build.SourcesDirectory)'
+        tags: |
+          wayf-backend:$(tag)
+          wayf-backend:latest
