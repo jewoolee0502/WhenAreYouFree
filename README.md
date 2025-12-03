@@ -4,6 +4,16 @@ WhenAreYouFree is a cross-platform scheduling web application that integrates wi
 Microsoft Outlook, and Apple iCloud. It helps users quickly find common available times to meet, 
 streamlining the scheduling process across different calendar providers.
 
+## Running the application with Docker Compose
+To run the full application with Docker Compose, simply:
+```sh
+docker compose build
+docker compose up -d
+```
+Your application should be available at `localhost:3000`.
+
+For production build, look at `deployment` branch
+
 ## 🚀 Project Setup
 
 ### Requirements:
